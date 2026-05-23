@@ -49,21 +49,46 @@
   ];
 
   // ── URL decode ──────────────────────────────────────────────────────
-  function getPayload() {
+  async function getPayload() {
     const params = new URLSearchParams(window.location.search);
+    // Strategy A: ?id=<gist_id> — fetch the JSON payload from a GitHub gist.
+    const gistId = params.get("id");
+    if (gistId) return await fetchGistPayload(gistId);
+    // Strategy B: ?d=<base64url-gzip-json> — decode inline.
     const raw = params.get("d") || window.location.hash.replace(/^#d=/, "");
-    if (!raw) throw new Error("No data parameter (?d=...) in URL.");
-    // base64-url decode → bytes → gzip decompress → text → JSON
+    if (!raw) throw new Error("No data parameter (?id=... or ?d=...) in URL.");
     const b64 = raw.replace(/-/g, "+").replace(/_/g, "/").padEnd(
       raw.length + (4 - (raw.length % 4)) % 4, "=");
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return decompressGzip(bytes).then(text => JSON.parse(text));
+    const text = await decompressGzip(bytes);
+    return JSON.parse(text);
+  }
+
+  async function fetchGistPayload(gistId) {
+    // Public api.github.com endpoint — no auth needed once we have the ID.
+    const r = await fetch(
+      `https://api.github.com/gists/${encodeURIComponent(gistId)}`,
+      {headers: {"Accept": "application/vnd.github+json"}}
+    );
+    if (!r.ok) throw new Error(`Gist fetch failed: HTTP ${r.status}`);
+    const data = await r.json();
+    const files = data.files || {};
+    const fileNames = Object.keys(files);
+    if (!fileNames.length) throw new Error("Gist has no files.");
+    const file = files[fileNames[0]];
+    // If the gist payload was truncated by GitHub's API, follow raw_url.
+    if (file.truncated && file.raw_url) {
+      const r2 = await fetch(file.raw_url);
+      if (!r2.ok) throw new Error(`Gist raw fetch failed: HTTP ${r2.status}`);
+      return JSON.parse(await r2.text());
+    }
+    return JSON.parse(file.content);
   }
 
   async function decompressGzip(bytes) {
-    // Use the native DecompressionStream API (Chrome 80+, FF 113+, Safari 16.4+).
+    // Native DecompressionStream API (Chrome 80+, FF 113+, Safari 16.4+).
     const stream = new Blob([bytes]).stream().pipeThrough(
       new DecompressionStream("gzip"));
     const text = await new Response(stream).text();

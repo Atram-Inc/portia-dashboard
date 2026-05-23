@@ -130,10 +130,8 @@ tr:hover{box-shadow:inset 3px 0 0 var(--moss-bright);}
 .wb-card.good{border-top-color:var(--moss-bright);}
 .wb-card .card-title{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);font-weight:600;}
 
-/* Footer / actions --------------------------------------------------- */
+/* Footer --------------------------------------------------- */
 .ftr{padding:14px 32px;font-size:0.74rem;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border);background:var(--surface);}
-.print-btn{background:transparent;color:var(--text);border:1px solid var(--border-strong);padding:6px 14px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:0.78rem;font-weight:500;transition:background .15s,border-color .15s;}
-.print-btn:hover{background:var(--surface-3);border-color:var(--moss-bright);color:var(--cream);}
 
 #error{padding:40px;color:var(--cream);text-align:center;font-size:1rem;}
 #error h2{color:var(--rust-bright);font-size:1.4rem;margin-bottom:14px;}
@@ -147,16 +145,3 @@ tr:hover{box-shadow:inset 3px 0 0 var(--moss-bright);}
   .topbar{flex-direction:column;align-items:flex-start;}
 }
 
-/* Print --------------------------------------------------------------*/
-@media print{
-  .sidebar,.print-btn,.ftr{display:none !important;}
-  .app{grid-template-columns:1fr;}
-  .panel{display:block !important;page-break-after:always;padding:0 !important;}
-  body{background:white;color:black;}
-  .topbar{background:white;color:black;border-bottom:2px solid #333;}
-  .topbar-title,.topbar-eyebrow{color:black;}
-  .card,.kpi,.tbl-wrap{background:white;border:1px solid #ccc;color:black;}
-  .kpi-v,.bname,.card-big,.card-title,.section-title{color:black;}
-  th{color:#222;background:#eee;}
-  td{color:#222;}
-}
