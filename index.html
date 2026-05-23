@@ -93,6 +93,28 @@
       <img class="brand-logo" src="assets/atram_logo.png" alt="Atram"/>
     </div>
     <nav class="nav" id="nav"></nav>
+    <button type="button" id="theme-toggle" class="theme-switch"
+            role="switch" aria-label="Toggle light/dark theme"
+            title="Toggle light/dark theme">
+      <span class="theme-switch-knob" aria-hidden="true"></span>
+      <span class="theme-switch-side is-light">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+        <span>Light</span>
+      </span>
+      <span class="theme-switch-side is-dark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <span>Dark</span>
+      </span>
+    </button>
   </aside>
   <main class="main">
     <header class="topbar">
@@ -102,22 +124,6 @@
           <h1 class="topbar-title" id="title"></h1>
           <span class="tier-chip" id="tier-chip"></span>
         </div>
-      </div>
-      <div class="topbar-right">
-        <button type="button" id="theme-toggle" class="theme-toggle"
-                aria-label="Toggle light/dark theme" title="Toggle light/dark theme">
-          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               aria-hidden="true">
-            <circle cx="12" cy="12" r="4"/>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-          </svg>
-        </button>
       </div>
     </header>
     <div class="content">
