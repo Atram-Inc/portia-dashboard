@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Portia PCRA</title>
+<link rel="icon" href="assets/atram_logo.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<noscript>
+  <div style="padding:40px;color:#c7c4be;background:#0d0b08;text-align:center;">
+    <h2>JavaScript required</h2>
+    <p>This dashboard renders client-side. Please enable JavaScript and reload.</p>
+  </div>
+</noscript>
+<div class="app" id="app" hidden>
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand-logo" src="assets/atram_logo.png" alt="Atram"/>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-eyebrow">Portfolio Climate Risk Assessment</div>
+        <div class="topbar-title-row">
+          <h1 class="topbar-title" id="title"></h1>
+          <span class="tier-chip" id="tier-chip"></span>
+        </div>
+      </div>
+    </header>
+    <div class="content">
+      <div id="tab-summary" class="panel active">
+        <div class="kpi-row" id="kpis"></div>
+        <div class="section-title">Hazard exposure profile (portfolio mean, 0&ndash;4 scale)</div>
+        <div class="card" id="hazard-bars"></div>
+        <div id="worst-best"></div>
+      </div>
+      <div id="tab-branches" class="panel">
+        <div id="branches-note" class="card-sub mb12"></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr id="branch-thead"></tr></thead>
+          <tbody id="branch-tbody"></tbody>
+        </table></div>
+      </div>
+      <div id="tab-water" class="panel"></div>
+      <div id="tab-trajectory" class="panel"></div>
+      <div id="tab-site" class="panel"></div>
+      <div id="tab-context" class="panel"></div>
+      <div id="tab-methodology" class="panel">
+        <div class="card">
+          <div class="card-title">📘 Methodology &amp; Data Sources</div>
+          <ul class="meth">
+            <li><strong>Hazard screening (ADM2):</strong> GFDRR ThinkHazard v2 — 8 hazards each scored 0–4.</li>
+            <li><strong>Score normalisation:</strong> Sum of reported hazards × (8 / n_reported). Tier thresholds: High ≥ 20, Medium 12–19, Low &lt; 12.</li>
+            <li><strong>Water risk:</strong> WRI Aqueduct 4.0 country-level baseline (water stress, drought).</li>
+            <li><strong>Climate trajectory:</strong> World Bank CCKP — CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline.</li>
+            <li><strong>Site climate:</strong> NASA POWER 30-year climatology at branch coordinates.</li>
+            <li><strong>Country context:</strong> ND-GAIN Country Index for vulnerability + adaptation readiness.</li>
+            <li><strong>Geocoding:</strong> GeoNames cities500 index (CC BY 4.0) plus ADM2 centroids baked into ThinkHazard.</li>
+            <li><strong>Limitations:</strong> ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="ftr">
+      <span id="ftr-text"></span>
+      <button class="print-btn" onclick="window.print()">Save as PDF</button>
+    </div>
+  </main>
+</div>
+<div id="error" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

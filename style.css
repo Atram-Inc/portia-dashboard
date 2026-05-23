@@ -1,0 +1,162 @@
+/* Portia dashboard template — Atram brand styling. The shape mirrors
+   what the Python tool used to render server-side; client-side JS in
+   app.js populates the dynamic content. */
+:root{
+  --bg:#25231f;
+  --surface:#25231f;
+  --surface-2:#0d0b08;
+  --surface-3:#444139;
+  --border:#3a3833;
+  --border-strong:#444139;
+  --text:#c7c4be;
+  --text-dim:#a8a399;
+  --text-faint:#6e6a62;
+  --moss:#456120;
+  --amber:#f1974c;
+  --rust:#96253a;
+  --yellow:#fde047;
+  --cream:#c7c4be;
+  --stone:#a8a399;
+  --moss-bright:#8bbc3a;
+  --rust-bright:#d8607a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'Inter',-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;font-size:14px;-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+
+/* App shell ----------------------------------------------------------*/
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+
+/* Sidebar ------------------------------------------------------------*/
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.brand{display:flex;align-items:center;padding:4px 8px 16px;border-bottom:1px solid var(--border);}
+.brand-logo{max-width:100%;max-height:48px;width:auto;height:auto;display:block;filter:brightness(0) invert(1);}
+.nav{display:flex;flex-direction:column;gap:2px;}
+.nav-section{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);padding:8px 12px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--text-dim);font-size:0.88rem;font-weight:500;transition:background .15s,color .15s;}
+.nav-item:hover{background:var(--surface-2);color:var(--text);}
+.nav-item.active{background:var(--surface-3);color:var(--cream);font-weight:600;}
+.nav-item.active .nav-ico{color:var(--moss-bright);}
+.nav-ico{width:16px;height:16px;flex-shrink:0;color:var(--text-faint);display:inline-block;background-color:currentColor;-webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;mask-size:contain;mask-repeat:no-repeat;mask-position:center;}
+.nav-ico-summary{--u:url('assets/icons/summary.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-branches{--u:url('assets/icons/branches.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-water{--u:url('assets/icons/water.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-site{--u:url('assets/icons/site.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-context{--u:url('assets/icons/context.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-methodology{--u:url('assets/icons/methodology.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-trajectory{--u:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMyAxN2w1LTUgNCA0IDctNyAyIDJ2OUgzdi0zeiIvPjwvc3ZnPg==");-webkit-mask-image:var(--u);mask-image:var(--u);}
+
+/* Main -------------------------------------------------------------- */
+.main{display:flex;flex-direction:column;min-width:0;}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding:24px 32px;border-bottom:1px solid var(--border);background:var(--surface);}
+.topbar-eyebrow{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:6px;}
+.topbar-title-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.topbar-title{font-size:1.5rem;font-weight:600;letter-spacing:-0.02em;color:var(--cream);}
+.topbar-country{color:var(--text-dim);font-weight:500;}
+.tier-chip{color:white;padding:6px 16px;border-radius:999px;font-weight:600;font-size:0.82rem;letter-spacing:0.02em;white-space:nowrap;display:inline-block;}
+
+.content{padding:24px 32px 64px;flex:1;max-width:1400px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* KPI cards --------------------------------------------------------- */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;}
+.kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.kpi-v{font-size:1.65rem;font-weight:700;font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.1;color:var(--cream);}
+.kpi-l{font-size:0.68rem;color:var(--text-dim);margin-top:4px;text-transform:uppercase;letter-spacing:0.08em;font-weight:500;}
+
+/* Section heads ------------------------------------------------------*/
+.section-title{font-size:0.95rem;font-weight:600;color:var(--cream);margin:4px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+/* Hazard bars --------------------------------------------------------*/
+.hbar-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.hbar-l{width:120px;font-size:0.82rem;color:var(--text-dim);flex-shrink:0;}
+.hbar-track{flex:1;background:var(--surface-3);border-radius:5px;height:10px;overflow:hidden;}
+.hbar-fill{height:100%;border-radius:5px;}
+.hbar-v{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:0.78rem;width:38px;text-align:right;color:var(--cream);font-weight:500;}
+
+/* Cards / layout ----------------------------------------------------- */
+.card{background:var(--surface-2);border-radius:10px;padding:18px 20px;border:1px solid var(--border);}
+.card-title{font-size:0.95rem;font-weight:600;color:var(--cream);margin-bottom:4px;}
+.card-big{font-size:1.15rem;font-weight:600;margin-top:4px;color:var(--cream);}
+.card-sub{font-size:0.78rem;color:var(--text-dim);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.mt24{margin-top:24px;} .mb16{margin-bottom:16px;} .mb12{margin-bottom:12px;}
+
+/* Tables ------------------------------------------------------------- */
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);}
+table{width:100%;border-collapse:collapse;font-size:0.82rem;background:transparent;}
+thead{background:var(--surface-3);color:var(--text);}
+th{padding:10px 12px;text-align:left;font-weight:600;font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);}
+tr:last-child td{border-bottom:none;}
+tr:hover td:not(.h){background:rgba(255,255,255,0.04);}
+tr:hover{box-shadow:inset 3px 0 0 var(--moss-bright);}
+.ccenter{text-align:center;} .bname{font-weight:600;color:var(--cream);}
+.score{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600;color:var(--cream);}
+
+/* Pills ------------------------------------------------------------- */
+.pill{display:inline-block;color:white;padding:2px 10px;border-radius:999px;font-size:0.7rem;font-weight:500;letter-spacing:0.01em;}
+.m-x{background:var(--moss);}
+.m-f{background:var(--yellow);color:#25231f;}
+.m-r{background:var(--amber);}
+.m-n{background:var(--stone);color:#25231f;}
+.tp{display:inline-block;color:white;padding:3px 12px;border-radius:999px;font-size:0.74rem;font-weight:600;letter-spacing:0.01em;}
+.t-h{background:var(--rust);}
+.t-m{background:var(--amber);color:#25231f;}
+.t-l{background:var(--moss);}
+.t-u{background:var(--stone);color:#25231f;}
+
+/* Hazard cells ------------------------------------------------------- */
+.h{color:white;text-align:center;font-size:0.74rem;font-weight:500;}
+.h0{background:#5e5c4e;color:#c7c4be;}
+.h1{background:#456120;}
+.h2{background:#fde047;color:#25231f;}
+.h3{background:#f1974c;color:#25231f;}
+.h4{background:#96253a;}
+.mini th{font-size:0.7rem;} .mini td{font-size:0.78rem;}
+
+/* Methodology list --------------------------------------------------- */
+.meth{list-style:none;}
+.meth li{padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem;color:var(--text);}
+.meth li:last-child{border-bottom:none;}
+.meth strong{color:var(--cream);font-weight:600;}
+
+/* Worst/best cards now use border accents --------------------------- */
+.wb-card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;border-top-width:3px;}
+.wb-card.bad{border-top-color:var(--rust-bright);}
+.wb-card.good{border-top-color:var(--moss-bright);}
+.wb-card .card-title{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);font-weight:600;}
+
+/* Footer / actions --------------------------------------------------- */
+.ftr{padding:14px 32px;font-size:0.74rem;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border);background:var(--surface);}
+.print-btn{background:transparent;color:var(--text);border:1px solid var(--border-strong);padding:6px 14px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:0.78rem;font-weight:500;transition:background .15s,border-color .15s;}
+.print-btn:hover{background:var(--surface-3);border-color:var(--moss-bright);color:var(--cream);}
+
+#error{padding:40px;color:var(--cream);text-align:center;font-size:1rem;}
+#error h2{color:var(--rust-bright);font-size:1.4rem;margin-bottom:14px;}
+#error pre{background:var(--surface-2);padding:12px;border-radius:8px;text-align:left;display:inline-block;margin-top:14px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem;max-width:600px;overflow:auto;}
+
+/* Responsive --------------------------------------------------------- */
+@media (max-width: 900px){
+  .app{grid-template-columns:1fr;}
+  .sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border);}
+  .nav{flex-direction:row;flex-wrap:wrap;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+}
+
+/* Print --------------------------------------------------------------*/
+@media print{
+  .sidebar,.print-btn,.ftr{display:none !important;}
+  .app{grid-template-columns:1fr;}
+  .panel{display:block !important;page-break-after:always;padding:0 !important;}
+  body{background:white;color:black;}
+  .topbar{background:white;color:black;border-bottom:2px solid #333;}
+  .topbar-title,.topbar-eyebrow{color:black;}
+  .card,.kpi,.tbl-wrap{background:white;border:1px solid #ccc;color:black;}
+  .kpi-v,.bname,.card-big,.card-title,.section-title{color:black;}
+  th{color:#222;background:#eee;}
+  td{color:#222;}
+}
