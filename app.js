@@ -289,7 +289,7 @@
     d.appendChild(el("div", {class:"kpi-l"}, title));
     const val = el("div", {class:"kpi-v", style:`color:${stressColor(v)}`});
     val.appendChild(document.createTextNode(v == null ? "—" : Number(v).toFixed(2)));
-    val.appendChild(el("span", {style:"font-size:0.7rem;color:#a8a399;font-family:'Inter',sans-serif;font-weight:500;"}, " /5"));
+    val.appendChild(el("span", {style:"font-size:0.7rem;color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:500;"}, " /5"));
     d.appendChild(val);
     if (label) d.appendChild(el("div", {class:"card-sub", style:"margin-top:4px;"}, label));
     return d;
@@ -373,7 +373,7 @@
       const val = el("div", {class:"kpi-v", style:`color:${color}`});
       val.appendChild(document.createTextNode(value));
       if (label === "ND-GAIN score") {
-        val.appendChild(el("span", {style:"font-size:0.7rem;color:#a8a399;font-family:'Inter',sans-serif;font-weight:500;"}, " /100"));
+        val.appendChild(el("span", {style:"font-size:0.7rem;color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:500;"}, " /100"));
       }
       c.appendChild(val);
       if (sub) c.appendChild(el("div", {class:"card-sub", style:"margin-top:4px;"}, sub));
@@ -401,6 +401,23 @@
       "Created by Portia, your personal climate analyst · " + payload.gen_date;
   }
 
+  // Theme toggle — initial value is applied by an inline script in
+  // index.html <head> before first paint, so by the time this runs the
+  // attribute is already set correctly. We just wire the click handler
+  // and persist subsequent flips. Storage key is kept in sync with the
+  // inline script (portia.theme).
+  function initThemeToggle() {
+    const btn = document.getElementById("theme-toggle");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const cur = document.documentElement.getAttribute("data-theme") === "light"
+        ? "light" : "dark";
+      const next = cur === "light" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("portia.theme", next); } catch (_) { /* ignore */ }
+    });
+  }
+
   // Fades out the inline-CSS loading screen from index.html and then
   // removes the node so it's no longer focusable. Safe to call multiple
   // times and safe even if #loading has already been removed.
@@ -426,6 +443,7 @@
       renderSite(payload);
       renderContext(payload);
       renderFooter(payload);
+      initThemeToggle();
       document.getElementById("app").hidden = false;
     } catch (e) {
       const err = document.getElementById("error");
