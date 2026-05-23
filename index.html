@@ -8,9 +8,50 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Critical CSS — inlined so it paints on first render, before style.css
+     loads and before app.js fetches the gist payload. Without this, the
+     user briefly sees a blank/white page while the network requests run. */
+  html, body { height: 100%; margin: 0; background: #25231f; }
+  body { font-family: 'Inter', -apple-system, Segoe UI, sans-serif; color: #c7c4be; }
+  #loading {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px; background: #25231f; z-index: 9999;
+    transition: opacity 0.25s ease;
+  }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  #loading .spinner {
+    width: 42px; height: 42px;
+    border: 3px solid #444139;
+    border-top-color: #8bbc3a;
+    border-radius: 50%;
+    animation: portia-spin 0.9s linear infinite;
+  }
+  #loading .label {
+    color: #a8a399; font-size: 0.78rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  @keyframes portia-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    #loading .spinner { animation-duration: 2.4s; }
+  }
+</style>
 <link rel="stylesheet" href="style.css"/>
+<noscript>
+  <style>
+    /* If JS is disabled, app.js can't hide the spinner — so hide it here
+       and let the <noscript> message in <body> take over. */
+    #loading { display: none; }
+  </style>
+</noscript>
 </head>
 <body>
+<div id="loading" role="status" aria-live="polite" aria-label="Loading dashboard">
+  <div class="spinner" aria-hidden="true"></div>
+  <div class="label">Loading dashboard…</div>
+</div>
 <noscript>
   <div style="padding:40px;color:#c7c4be;background:#0d0b08;text-align:center;">
     <h2>JavaScript required</h2>

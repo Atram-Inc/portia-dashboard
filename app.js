@@ -401,6 +401,18 @@
       "Created by Portia, your personal climate analyst · " + payload.gen_date;
   }
 
+  // Fades out the inline-CSS loading screen from index.html and then
+  // removes the node so it's no longer focusable. Safe to call multiple
+  // times and safe even if #loading has already been removed.
+  function hideLoading() {
+    const lo = document.getElementById("loading");
+    if (!lo) return;
+    lo.classList.add("hide");
+    setTimeout(() => {
+      if (lo.parentNode) lo.parentNode.removeChild(lo);
+    }, 300);
+  }
+
   // ── Main ────────────────────────────────────────────────────────────
   async function main() {
     try {
@@ -424,6 +436,8 @@
         <pre>${(e && e.message) || String(e)}</pre>
       `;
       console.error(e);
+    } finally {
+      hideLoading();
     }
   }
   main();
