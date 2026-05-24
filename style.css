@@ -52,7 +52,12 @@ body{font-family:'Inter',-apple-system,Segoe UI,sans-serif;background:var(--bg);
 a{color:inherit;text-decoration:none;}
 
 /* App shell ----------------------------------------------------------*/
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+/* :not([hidden]) so the [hidden] attribute on #app keeps the shell
+   collapsed until app.js has populated it. Without this scope the
+   `display:grid` would override the user-agent `[hidden]{display:none}`
+   default, and a payload-decode failure would render an empty app shell
+   alongside the error block. */
+.app:not([hidden]){display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
 
 /* Sidebar ------------------------------------------------------------*/
 .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow-y:auto;}
