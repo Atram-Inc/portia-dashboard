@@ -229,34 +229,196 @@
     return c;
   }
 
+  // Branch table — interactive: text-filter, region/tier/match dropdowns,
+  // and column sort via clickable headers. State (filters + sort) is held
+  // in `branchState` and a single applyFilters() call re-renders the tbody.
+  const TIER_ORDER = {High:3, Medium:2, Low:1, Unmatched:0};
+  const branchState = {
+    rows: [],
+    colDefs: [],
+    text: "",
+    region: "",
+    tier: "",
+    match: "",
+    sortKey: null,
+    sortDir: 1,
+  };
+
+  function matchBucket(mt) {
+    if (!mt) return "not found";
+    if (mt === "exact") return "exact";
+    if (/region/i.test(mt)) return "region";
+    if (/fuzzy/i.test(mt)) return "fuzzy";
+    return "not found";
+  }
+
   function renderBranches(payload) {
     if (payload.branches_note) {
       document.getElementById("branches-note").textContent = payload.branches_note;
     }
+
+    const hazardCols = payload.hazards.map((h, i) => ({
+      label: h.name, align: "center",
+      value: (b) => (b.h && typeof b.h[i] === "number") ? b.h[i] : -1,
+    }));
+    const colDefs = [
+      {label:"Branch", align:"left",   value:(b)=>(b.name||"").toLowerCase()},
+      {label:"City",   align:"left",   value:(b)=>(b.city||"").toLowerCase()},
+      {label:"Region", align:"left",   value:(b)=>(b.state||"").toLowerCase()},
+      {label:"Match",  align:"center", value:(b)=>matchBucket(b.match_type)},
+      {label:"Score",  align:"center", value:(b)=>(b.score==null ? -1 : Number(b.score))},
+      {label:"Tier",   align:"center", value:(b)=>(TIER_ORDER[b.tier] || 0)},
+    ].concat(hazardCols);
+
     const thead = document.getElementById("branch-thead");
-    const cols = ["Branch","City","Region","Match","Score","Tier"]
-      .concat(payload.hazards.map(h => h.name));
-    cols.forEach((label, i) => {
-      thead.appendChild(el("th", {class: i >= 3 ? "ccenter" : ""}, label));
-    });
-    const tbody = document.getElementById("branch-tbody");
-    payload.branches.forEach(b => {
-      const tr = el("tr");
-      tr.appendChild(el("td", {class:"bname"}, b.name));
-      tr.appendChild(el("td", {}, b.city || ""));
-      tr.appendChild(el("td", {}, b.state || ""));
-      const matchTd = el("td", {class:"ccenter"});
-      matchTd.appendChild(el("span", {class:"pill " + matchClass(b.match_type)}, b.match_type));
-      tr.appendChild(matchTd);
-      tr.appendChild(el("td", {class:"ccenter score"}, b.score == null ? "—" : String(b.score)));
-      const tierTd = el("td", {class:"ccenter"});
-      tierTd.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, b.tier));
-      tr.appendChild(tierTd);
-      (b.h || []).forEach(v => {
-        tr.appendChild(el("td", {class:"h h" + v}, LEVEL_LABELS[v] || ""));
+    thead.innerHTML = "";
+    colDefs.forEach((col, i) => {
+      const th = el("th", {
+        class: (col.align==="center" ? "ccenter " : "") + "sortable",
+        "data-sort-key": String(i),
       });
-      tbody.appendChild(tr);
+      th.appendChild(document.createTextNode(col.label));
+      th.appendChild(el("span", {class:"sort-ind", "data-for": String(i)}, ""));
+      th.addEventListener("click", () => {
+        if (branchState.sortKey === i) branchState.sortDir *= -1;
+        else { branchState.sortKey = i; branchState.sortDir = 1; }
+        applyFilters();
+      });
+      thead.appendChild(th);
     });
+
+    branchState.rows = payload.branches.slice();
+    branchState.colDefs = colDefs;
+
+    buildFilterRow(payload);
+    applyFilters();
+  }
+
+  function buildFilterRow(payload) {
+    const host = document.getElementById("branch-filters");
+    host.hidden = false;
+    host.innerHTML = "";
+
+    const textWrap = el("label", {class:"branch-filter"});
+    textWrap.appendChild(el("span", {class:"branch-filter-label"}, "Search"));
+    const text = el("input", {
+      type:"search", placeholder:"Branch or city…",
+      class:"branch-filter-input",
+    });
+    text.addEventListener("input", () => {
+      branchState.text = text.value.trim().toLowerCase();
+      applyFilters();
+    });
+    textWrap.appendChild(text);
+    host.appendChild(textWrap);
+
+    const regions = Array.from(new Set(
+      payload.branches.map(b => (b.state || "").trim())
+    )).filter(s => s.length > 0).sort((a,b) => a.localeCompare(b));
+    host.appendChild(makeSelect("Region", regions, (v) => {
+      branchState.region = v; applyFilters();
+    }));
+
+    const tiers = Array.from(new Set(payload.branches.map(b => b.tier || "")))
+      .filter(t => t.length > 0)
+      .sort((a,b) => (TIER_ORDER[b]||0) - (TIER_ORDER[a]||0));
+    host.appendChild(makeSelect("Tier", tiers, (v) => {
+      branchState.tier = v; applyFilters();
+    }));
+
+    const matchBuckets = Array.from(new Set(
+      payload.branches.map(b => matchBucket(b.match_type))
+    )).sort();
+    host.appendChild(makeSelect("Match", matchBuckets, (v) => {
+      branchState.match = v; applyFilters();
+    }));
+
+    const reset = el("button", {type:"button", class:"branch-filter-reset"},
+                     "Reset");
+    reset.addEventListener("click", () => {
+      branchState.text = ""; branchState.region = "";
+      branchState.tier = ""; branchState.match = "";
+      branchState.sortKey = null; branchState.sortDir = 1;
+      host.querySelectorAll("input,select").forEach(node => {
+        node.value = "";
+      });
+      applyFilters();
+    });
+    host.appendChild(reset);
+  }
+
+  function makeSelect(label, options, onChange) {
+    const wrap = el("label", {class:"branch-filter"});
+    wrap.appendChild(el("span", {class:"branch-filter-label"}, label));
+    const sel = el("select", {class:"branch-filter-input"});
+    sel.appendChild(el("option", {value:""}, "All"));
+    options.forEach(opt => {
+      sel.appendChild(el("option", {value:opt}, opt));
+    });
+    sel.addEventListener("change", () => onChange(sel.value));
+    wrap.appendChild(sel);
+    return wrap;
+  }
+
+  function applyFilters() {
+    const {rows, colDefs, text, region, tier, match,
+           sortKey, sortDir} = branchState;
+    let out = rows;
+    if (text) {
+      out = out.filter(b =>
+        (b.name||"").toLowerCase().includes(text) ||
+        (b.city||"").toLowerCase().includes(text));
+    }
+    if (region) out = out.filter(b => (b.state||"") === region);
+    if (tier)   out = out.filter(b => (b.tier||"") === tier);
+    if (match)  out = out.filter(b => matchBucket(b.match_type) === match);
+
+    if (sortKey != null && colDefs[sortKey]) {
+      const col = colDefs[sortKey];
+      out = out.slice().sort((a, b) => {
+        const va = col.value(a), vb = col.value(b);
+        if (va === vb) return 0;
+        if (typeof va === "number" && typeof vb === "number") {
+          return (va - vb) * sortDir;
+        }
+        return (va < vb ? -1 : 1) * sortDir;
+      });
+    }
+
+    document.querySelectorAll(".sort-ind").forEach(node => {
+      const k = Number(node.getAttribute("data-for"));
+      node.textContent = (sortKey === k) ? (sortDir > 0 ? " ▲" : " ▼") : "";
+    });
+
+    const total = rows.length;
+    const shown = out.length;
+    const cnt = document.getElementById("branch-count");
+    cnt.hidden = false;
+    cnt.textContent = (shown === total)
+      ? `${total} branches`
+      : `${shown} of ${total} branches shown`;
+
+    const tbody = document.getElementById("branch-tbody");
+    tbody.innerHTML = "";
+    out.forEach(b => tbody.appendChild(renderBranchRow(b)));
+  }
+
+  function renderBranchRow(b) {
+    const tr = el("tr");
+    tr.appendChild(el("td", {class:"bname"}, b.name));
+    tr.appendChild(el("td", {}, b.city || ""));
+    tr.appendChild(el("td", {}, b.state || ""));
+    const matchTd = el("td", {class:"ccenter"});
+    matchTd.appendChild(el("span", {class:"pill " + matchClass(b.match_type)}, b.match_type));
+    tr.appendChild(matchTd);
+    tr.appendChild(el("td", {class:"ccenter score"}, b.score == null ? "—" : String(b.score)));
+    const tierTd = el("td", {class:"ccenter"});
+    tierTd.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, b.tier));
+    tr.appendChild(tierTd);
+    (b.h || []).forEach(v => {
+      tr.appendChild(el("td", {class:"h h" + v}, LEVEL_LABELS[v] || ""));
+    });
+    return tr;
   }
 
   function renderWater(payload) {

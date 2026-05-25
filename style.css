@@ -132,12 +132,44 @@ a{color:inherit;text-decoration:none;}
 table{width:100%;border-collapse:collapse;font-size:0.82rem;background:transparent;}
 thead{background:var(--surface-3);color:var(--text);}
 th{padding:10px 12px;text-align:left;font-weight:600;font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);}
+th.sortable{cursor:pointer;user-select:none;transition:color .12s,background .12s;}
+th.sortable:hover{color:var(--cream);background:var(--hover-overlay);}
+th.sortable .sort-ind{display:inline-block;width:14px;color:var(--moss-bright);font-size:0.7rem;}
 td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);}
 tr:last-child td{border-bottom:none;}
 tr:hover td:not(.h){background:var(--hover-overlay);}
 tr:hover{box-shadow:inset 3px 0 0 var(--moss-bright);}
 .ccenter{text-align:center;} .bname{font-weight:600;color:var(--cream);}
 .score{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600;color:var(--cream);}
+
+/* Branch table filter row ------------------------------------------- */
+.branch-filters{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;
+  margin-bottom:12px;
+}
+.branch-filter{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.branch-filter-label{
+  font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--text-dim);font-weight:600;
+}
+.branch-filter-input{
+  background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);border-radius:6px;
+  padding:6px 10px;font:inherit;font-size:0.82rem;height:32px;
+  min-width:140px;outline:none;transition:border-color .12s;
+}
+.branch-filter-input:hover{border-color:var(--border-strong);}
+.branch-filter-input:focus{border-color:var(--moss-bright);}
+.branch-filter-input::placeholder{color:var(--text-faint);}
+select.branch-filter-input{cursor:pointer;}
+.branch-filter-reset{
+  background:transparent;color:var(--text-dim);
+  border:1px solid var(--border);border-radius:6px;
+  padding:6px 12px;font:inherit;font-size:0.78rem;height:32px;
+  cursor:pointer;transition:color .12s,border-color .12s;
+  align-self:flex-end;
+}
+.branch-filter-reset:hover{color:var(--cream);border-color:var(--border-strong);}
 
 /* Pills ------------------------------------------------------------- */
 .pill{display:inline-block;color:white;padding:2px 10px;border-radius:999px;font-size:0.7rem;font-weight:500;letter-spacing:0.01em;}
