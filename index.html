@@ -26,6 +26,35 @@
     }
   })();
 </script>
+<script>
+  /* Apply the initial language BEFORE first paint so the loading spinner
+     label renders in the right language. Resolution order:
+     ?lang= URL param → localStorage "portia.lang" → navigator.language
+     → "en". Storage key + supported list are mirrored in app.js — keep
+     them in sync. */
+  (function () {
+    try {
+      var supported = ["en", "es"];
+      var pick = null;
+      var m = window.location.search.match(/[?&]lang=([a-zA-Z-]+)/);
+      if (m) {
+        var u = decodeURIComponent(m[1]).toLowerCase().slice(0, 2);
+        if (supported.indexOf(u) >= 0) pick = u;
+      }
+      if (!pick) {
+        var stored = localStorage.getItem("portia.lang");
+        if (stored && supported.indexOf(stored) >= 0) pick = stored;
+      }
+      if (!pick) {
+        var nav = (navigator.language || "en").toLowerCase().slice(0, 2);
+        if (supported.indexOf(nav) >= 0) pick = nav;
+      }
+      document.documentElement.setAttribute("lang", pick || "en");
+    } catch (e) {
+      document.documentElement.setAttribute("lang", "en");
+    }
+  })();
+</script>
 <style>
   /* Critical CSS — inlined so it paints on first render, before style.css
      loads and before app.js fetches the gist payload. Without this, the
@@ -63,6 +92,10 @@
     letter-spacing: 0.08em; text-transform: uppercase;
   }
   html[data-theme="light"] #loading .label { color: #5e5b52; }
+  /* Lang-aware loading label. Driven by <html lang> set by the inline
+     script in <head> before first paint. Keep keys in sync with app.js. */
+  #loading .label::after { content: "Loading dashboard…"; }
+  html[lang="es"] #loading .label::after { content: "Cargando panel…"; }
   @keyframes portia-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) {
     #loading .spinner { animation-duration: 2.4s; }
@@ -80,7 +113,7 @@
 <body>
 <div id="loading" role="status" aria-live="polite" aria-label="Loading dashboard">
   <div class="spinner" aria-hidden="true"></div>
-  <div class="label">Loading dashboard…</div>
+  <div class="label"></div>
 </div>
 <noscript>
   <div style="padding:40px;color:#c7c4be;background:#0d0b08;text-align:center;">
@@ -120,11 +153,20 @@
   <main class="main">
     <header class="topbar">
       <div class="topbar-left">
-        <div class="topbar-eyebrow">Portfolio Climate Risk Assessment</div>
+        <div class="topbar-eyebrow" id="topbar-eyebrow"></div>
         <div class="topbar-title-row">
           <h1 class="topbar-title" id="title"></h1>
           <span class="tier-chip" id="tier-chip"></span>
         </div>
+      </div>
+      <div class="topbar-right">
+        <label class="lang-switcher">
+          <span class="lang-switcher-icon" aria-hidden="true">🌐</span>
+          <select id="lang-switcher" aria-label="Language">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
       </div>
     </header>
     <div class="content">
@@ -147,21 +189,7 @@
       <div id="tab-trajectory" class="panel"></div>
       <div id="tab-site" class="panel"></div>
       <div id="tab-context" class="panel"></div>
-      <div id="tab-methodology" class="panel">
-        <div class="card">
-          <div class="card-title">📘 Methodology &amp; Data Sources</div>
-          <ul class="meth">
-            <li><strong>Hazard screening (ADM2):</strong> GFDRR ThinkHazard v2 — 8 hazards each scored 0–4.</li>
-            <li><strong>Score normalisation:</strong> Sum of reported hazards × (8 / n_reported). Tier thresholds: High ≥ 20, Medium 12–19, Low &lt; 12.</li>
-            <li><strong>Water risk:</strong> WRI Aqueduct 4.0 country-level baseline (water stress, drought).</li>
-            <li><strong>Climate trajectory:</strong> World Bank CCKP — CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline.</li>
-            <li><strong>Site climate:</strong> NASA POWER 30-year climatology at branch coordinates.</li>
-            <li><strong>Country context:</strong> ND-GAIN Country Index for vulnerability + adaptation readiness.</li>
-            <li><strong>Geocoding:</strong> GeoNames cities500 index (CC BY 4.0) plus ADM2 centroids baked into ThinkHazard.</li>
-            <li><strong>Limitations:</strong> ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure.</li>
-          </ul>
-        </div>
-      </div>
+      <div id="tab-methodology" class="panel"></div>
     </div>
     <div class="ftr">
       <span id="ftr-text"></span>
