@@ -153,6 +153,7 @@
       trajectory_delta_precip: "Δ precipitation",
 
       // Site tab
+      site_title: "🌡 Site climate",
       site_source: "Annual climatology averages at each branch's coordinates (NASA POWER 30-year climatology).",
       site_col_branch: "Branch",
       site_col_city: "City",
@@ -171,18 +172,66 @@
       context_lower_better: "lower is better",
       context_higher_better: "higher is better",
 
-      // Methodology tab
-      methodology_title: "📘 Methodology & Data Sources",
-      methodology_items: [
-        ["Hazard screening (ADM2):", "GFDRR ThinkHazard v2 — 8 hazards each scored 0–4."],
-        ["Score normalisation:", "Sum of reported hazards × (8 / n_reported). Tier thresholds: High ≥ 20, Medium 12–19, Low < 12."],
-        ["Water risk:", "WRI Aqueduct 4.0 country-level baseline (water stress, drought)."],
-        ["Climate trajectory:", "World Bank CCKP — CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline."],
-        ["Site climate:", "NASA POWER 30-year climatology at branch coordinates."],
-        ["Country context:", "ND-GAIN Country Index for vulnerability + adaptation readiness."],
-        ["Geocoding:", "GeoNames cities500 index (CC BY 4.0) plus ADM2 centroids baked into ThinkHazard."],
-        ["Limitations:", "ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure."],
+      // Plain-language summary narrative — composed client-side from the
+      // existing payload fields. `data` is built by renderSummaryNarrative().
+      // Bold spans use **markdown** and are parsed safely with renderBoldMarkdown.
+      narrative: (data) => {
+        const cov = data.coverage_all
+          ? `this assessment covers all ${data.total} branches`
+          : `this assessment covers ${data.total} branches (${data.matched} matched into hazard data)`;
+        const worst = data.worst
+          ? ` — **${data.worst.name}** (score ${data.worst.score}, ${data.worst.tier_display}) is the worst-exposed branch`
+          : "";
+        return `${data.fsp_name} operates across ${data.country_phrase}; ${cov}. ` +
+               `Portfolio sits at **${data.tier_display}** tier (avg score ${data.avg}) ` +
+               `with **${data.top_hazard}** as the dominant hazard${worst}.`;
+      },
+
+      // Per-panel "ⓘ" info callouts — opened via native <details>. Each
+      // entry is an array of [label, value] rows documenting that panel's
+      // dataset resolution, version, license, and limitations.
+      info_aria: "Source information",
+      info_water: [
+        ["Resolution:", "Country-level baseline (WRI publishes sub-basin data but the dashboard currently uses the country-aggregated CSV)."],
+        ["Dataset version:", "WRI Aqueduct 4.0 (2023)."],
+        ["License:", "CC BY 4.0."],
+        ["Limitations:", "Country aggregate; branch-level water risk may differ significantly from this score."],
       ],
+      info_trajectory: [
+        ["Resolution:", "Country-level ensemble mean."],
+        ["Dataset version:", "World Bank CCKP — CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline."],
+        ["License:", "CC BY 4.0."],
+        ["Limitations:", "Single emissions scenario; uncertainty bands not shown."],
+      ],
+      info_site: [
+        ["Resolution:", "Point (lat/lon) sampled from NASA POWER's ~0.5° (~55 km) grid at each branch's coordinates."],
+        ["Dataset version:", "NASA POWER 30-year climatology."],
+        ["License:", "Public domain."],
+        ["Limitations:", "Historical climatology, not a future projection. Only the top 75 worst-exposed branches are sampled."],
+      ],
+      info_context: [
+        ["Resolution:", "Country-level annual index."],
+        ["Dataset version:", "ND-GAIN Country Index (Notre Dame Global Adaptation Initiative)."],
+        ["License:", "CC BY-SA 4.0."],
+        ["Limitations:", "Captures national adaptation capacity; does not vary by branch location within a country."],
+      ],
+
+      // Methodology tab — structured table of all input data sources.
+      methodology_title: "📘 Methodology & Data Sources",
+      methodology_intro: "All inputs to the Light PCRA, with their resolution, vintage, and license.",
+      methodology_table_headers: ["Source", "Purpose", "Resolution", "Vintage", "License"],
+      methodology_sources: [
+        {source: "GFDRR ThinkHazard v2", purpose: "Hazard screening — 8 hazards each scored 0–4", resolution: "ADM2 (province / department / county)", vintage: "2017", license: "CC BY 4.0"},
+        {source: "GeoNames cities500", purpose: "Branch geocoding", resolution: "City centroid", vintage: "Continuously updated", license: "CC BY 4.0"},
+        {source: "WRI Aqueduct 4.0", purpose: "Water stress + drought (Water Risk tab)", resolution: "Country aggregate", vintage: "2023", license: "CC BY 4.0"},
+        {source: "World Bank CCKP", purpose: "Climate projection to 2050 (Climate Trajectory tab)", resolution: "Country, CMIP6 SSP2-4.5 ensemble", vintage: "2024", license: "CC BY 4.0"},
+        {source: "NASA POWER", purpose: "30-year climatology at branch coordinates (Site Climate tab)", resolution: "~0.5° grid (~55 km)", vintage: "30-year window", license: "Public domain"},
+        {source: "ND-GAIN Country Index", purpose: "Country vulnerability + adaptation readiness (Country Context tab)", resolution: "Country", vintage: "Annual", license: "CC BY-SA 4.0"},
+      ],
+      methodology_score_title: "Composite risk score",
+      methodology_score_body: "Per-branch score = sum of reported hazard levels × (8 / number of hazards with data). Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds: High ≥ 20, Medium 12–19, Low < 12.",
+      methodology_limitations_title: "Limitations",
+      methodology_limitations_body: "ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure. Water risk, climate trajectory, and country context are country-level; branch-level conditions can differ substantially. Sub-national alternatives are on the roadmap.",
 
       // Footer
       footer_text: "Created by Portia, your personal climate analyst",
@@ -285,6 +334,7 @@
       trajectory_delta_precip: "Δ precipitación",
 
       // Site tab
+      site_title: "🌡 Clima del sitio",
       site_source: "Promedios climatológicos anuales en las coordenadas de cada sucursal (climatología NASA POWER de 30 años).",
       site_col_branch: "Sucursal",
       site_col_city: "Ciudad",
@@ -303,18 +353,62 @@
       context_lower_better: "menor es mejor",
       context_higher_better: "mayor es mejor",
 
-      // Methodology tab
-      methodology_title: "📘 Metodología y fuentes de datos",
-      methodology_items: [
-        ["Detección de amenazas (ADM2):", "GFDRR ThinkHazard v2 — 8 amenazas cada una puntuada 0–4."],
-        ["Normalización del puntaje:", "Suma de amenazas reportadas × (8 / n_reportadas). Umbrales: Alto ≥ 20, Medio 12–19, Bajo < 12."],
-        ["Riesgo hídrico:", "Línea base nacional WRI Aqueduct 4.0 (estrés hídrico, sequía)."],
-        ["Trayectoria climática:", "World Bank CCKP — ensamble CMIP6 SSP2-4.5, 2040–2059 vs. línea base CRU 1991–2020."],
-        ["Clima del sitio:", "Climatología NASA POWER de 30 años en las coordenadas de las sucursales."],
-        ["Contexto del país:", "Índice de País ND-GAIN para vulnerabilidad y preparación de adaptación."],
-        ["Geocodificación:", "Índice GeoNames cities500 (CC BY 4.0) más centroides ADM2 incorporados en ThinkHazard."],
-        ["Limitaciones:", "La metodología ThinkHazard v2 es de 2017; la granularidad ADM2 puede ser más gruesa que la exposición real de una sucursal."],
+      // Plain-language summary narrative — Spanish version.
+      narrative: (data) => {
+        const cov = data.coverage_all
+          ? `esta evaluación cubre las ${data.total} sucursales`
+          : `esta evaluación cubre ${data.total} sucursales (${data.matched} con coincidencia)`;
+        const worst = data.worst
+          ? ` — **${data.worst.name}** (puntaje ${data.worst.score}, ${data.worst.tier_display}) es la sucursal más expuesta`
+          : "";
+        return `${data.fsp_name} opera en ${data.country_phrase}; ${cov}. ` +
+               `La cartera está en el nivel **${data.tier_display}** (puntaje promedio ${data.avg}) ` +
+               `con **${data.top_hazard}** como amenaza dominante${worst}.`;
+      },
+
+      // Per-panel "ⓘ" info callouts (Spanish).
+      info_aria: "Información de la fuente",
+      info_water: [
+        ["Resolución:", "Línea base nacional (WRI publica datos sub-nacionales por cuenca pero el panel actualmente usa el CSV agregado por país)."],
+        ["Versión:", "WRI Aqueduct 4.0 (2023)."],
+        ["Licencia:", "CC BY 4.0."],
+        ["Limitaciones:", "Agregado nacional; el riesgo hídrico a nivel de sucursal puede diferir significativamente."],
       ],
+      info_trajectory: [
+        ["Resolución:", "Promedio nacional del ensamble."],
+        ["Versión:", "World Bank CCKP — ensamble CMIP6 SSP2-4.5, 2040–2059 vs. línea base CRU 1991–2020."],
+        ["Licencia:", "CC BY 4.0."],
+        ["Limitaciones:", "Un solo escenario de emisiones; no se muestran bandas de incertidumbre."],
+      ],
+      info_site: [
+        ["Resolución:", "Punto (lat/lon) muestreado de la cuadrícula NASA POWER de ~0.5° (~55 km) en las coordenadas de cada sucursal."],
+        ["Versión:", "Climatología NASA POWER de 30 años."],
+        ["Licencia:", "Dominio público."],
+        ["Limitaciones:", "Climatología histórica, no proyección futura. Solo se muestrean las 75 sucursales más expuestas."],
+      ],
+      info_context: [
+        ["Resolución:", "Índice nacional anual."],
+        ["Versión:", "Índice de País ND-GAIN (Notre Dame Global Adaptation Initiative)."],
+        ["Licencia:", "CC BY-SA 4.0."],
+        ["Limitaciones:", "Captura la capacidad nacional de adaptación; no varía por ubicación de sucursal dentro del país."],
+      ],
+
+      // Methodology tab — Spanish.
+      methodology_title: "📘 Metodología y fuentes de datos",
+      methodology_intro: "Todas las entradas del Light PCRA, con su resolución, vigencia y licencia.",
+      methodology_table_headers: ["Fuente", "Propósito", "Resolución", "Vigencia", "Licencia"],
+      methodology_sources: [
+        {source: "GFDRR ThinkHazard v2", purpose: "Detección de amenazas — 8 amenazas cada una 0–4", resolution: "ADM2 (provincia / departamento / condado)", vintage: "2017", license: "CC BY 4.0"},
+        {source: "GeoNames cities500", purpose: "Geocodificación de sucursales", resolution: "Centroide de ciudad", vintage: "Actualización continua", license: "CC BY 4.0"},
+        {source: "WRI Aqueduct 4.0", purpose: "Estrés hídrico + sequía (pestaña Riesgo hídrico)", resolution: "Agregado nacional", vintage: "2023", license: "CC BY 4.0"},
+        {source: "World Bank CCKP", purpose: "Proyección climática a 2050 (pestaña Trayectoria climática)", resolution: "Nacional, ensamble CMIP6 SSP2-4.5", vintage: "2024", license: "CC BY 4.0"},
+        {source: "NASA POWER", purpose: "Climatología de 30 años en coordenadas de sucursal (pestaña Clima del sitio)", resolution: "Cuadrícula ~0.5° (~55 km)", vintage: "Ventana de 30 años", license: "Dominio público"},
+        {source: "Índice de País ND-GAIN", purpose: "Vulnerabilidad + preparación de adaptación nacional (pestaña Contexto del país)", resolution: "Nacional", vintage: "Anual", license: "CC BY-SA 4.0"},
+      ],
+      methodology_score_title: "Puntaje compuesto de riesgo",
+      methodology_score_body: "Puntaje por sucursal = suma de los niveles de amenaza reportados × (8 / número de amenazas con datos). Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs agregados. Umbrales: Alto ≥ 20, Medio 12–19, Bajo < 12.",
+      methodology_limitations_title: "Limitaciones",
+      methodology_limitations_body: "La metodología ThinkHazard v2 es de 2017; la granularidad ADM2 puede ser más gruesa que la exposición real de una sucursal. Riesgo hídrico, trayectoria climática y contexto nacional son a nivel país; las condiciones a nivel de sucursal pueden diferir sustancialmente. Hay alternativas sub-nacionales en la hoja de ruta.",
 
       // Footer
       footer_text: "Creado por Portia, tu analista climático personal",
@@ -492,6 +586,49 @@
     banner.appendChild(txt);
   }
 
+  // Renders a string with **bold** spans into `target` as text + <strong>
+  // nodes. Avoids innerHTML so we don't have to think about XSS even though
+  // the source is our own LOCALES.
+  function renderBoldMarkdown(text, target) {
+    const parts = String(text).split(/\*\*(.+?)\*\*/g);
+    parts.forEach((p, i) => {
+      if (!p) return;
+      if (i % 2 === 1) target.appendChild(el("strong", {}, p));
+      else target.appendChild(document.createTextNode(p));
+    });
+  }
+
+  // Native <details> info widget appended to a panel's card-title. The key
+  // (e.g. "water", "trajectory") looks up an info_<key> entry in LOCALES,
+  // which is an array of [label, value] rows.
+  function makePanelInfo(key) {
+    const rows = t("info_" + key);
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const det = el("details", {class:"panel-info"});
+    det.appendChild(el("summary", {"aria-label": t("info_aria") || "Info"}, "ⓘ"));
+    const body = el("div", {class:"panel-info-body"});
+    rows.forEach(([label, value]) => {
+      const row = el("div", {class:"pi-row"});
+      row.appendChild(el("strong", {}, label + " "));
+      row.appendChild(document.createTextNode(value));
+      body.appendChild(row);
+    });
+    det.appendChild(body);
+    return det;
+  }
+
+  // Build a panel title with a "ⓘ" callout appended. Used by every layer
+  // panel (water, trajectory, site, context) so each surfaces its dataset
+  // version + resolution + license without users having to scroll to the
+  // Methodology tab.
+  function titleWithInfo(titleText, infoKey) {
+    const title = el("div", {class:"card-title"});
+    title.appendChild(document.createTextNode(titleText));
+    const info = makePanelInfo(infoKey);
+    if (info) title.appendChild(info);
+    return title;
+  }
+
   // Hazard name lookup: prefers the payload's `code` field; falls back to
   // reverse-mapping the English `name` if no code is present (older payloads).
   function hazardName(h) {
@@ -563,7 +700,47 @@
     document.title = t("page_title", payload.fsp_name);
   }
 
+  // Plain-language portfolio narrative at the top of the Summary tab.
+  // Composed from existing payload fields (no new server side needed);
+  // hidden if any of the required fields is missing.
+  function renderSummaryNarrative(payload) {
+    const target = document.getElementById("summary-narrative");
+    if (!target) return;
+    target.innerHTML = "";
+    if (!payload || !payload.kpi || !payload.tier) {
+      target.hidden = true;
+      return;
+    }
+    const cov = payload.coverage;
+    const coverage_all = !cov || cov.unmatched === 0;
+    const topHazardCode = payload.kpi.top_hazard_code;
+    const topHazard = topHazardCode
+      ? t("hazard_" + topHazardCode)
+      : (payload.kpi.top_hazard_label || "—");
+    const data = {
+      fsp_name: payload.fsp_name,
+      country_phrase: payload.country_display || "",
+      coverage_all,
+      total: cov ? cov.uploaded : payload.kpi.total,
+      matched: cov ? cov.matched : payload.kpi.total,
+      tier_display: tierLabel(payload.tier.label),
+      avg: payload.kpi.avg,
+      top_hazard: topHazard,
+      worst: payload.worst ? {
+        name: payload.worst.name,
+        score: payload.worst.score,
+        tier_display: tierLabel(payload.worst.tier),
+      } : null,
+    };
+    const md = t("narrative", data);
+    if (!md) { target.hidden = true; return; }
+    target.hidden = false;
+    renderBoldMarkdown(md, target);
+  }
+
   function renderSummary(payload) {
+    renderSummaryNarrative(payload);
+
     const kpis = document.getElementById("kpis");
     kpis.innerHTML = "";
 
@@ -863,7 +1040,7 @@
     if (!payload.water) return;
     const w = payload.water;
     const card = el("div", {class:"card mb16"});
-    card.appendChild(el("div", {class:"card-title"}, t("water_title", w.country)));
+    card.appendChild(titleWithInfo(t("water_title", w.country), "water"));
     card.appendChild(el("div", {class:"card-sub mb12"}, t("water_source")));
     const grid = el("div", {class:"grid-2"});
     grid.appendChild(stressBlock(t("water_stress"), w.water_stress));
@@ -899,7 +1076,7 @@
     if (!payload.trajectory) return;
     const tr = payload.trajectory;
     const card = el("div", {class:"card mb16"});
-    card.appendChild(el("div", {class:"card-title"}, t("trajectory_title", tr.country)));
+    card.appendChild(titleWithInfo(t("trajectory_title", tr.country), "trajectory"));
     card.appendChild(el("div", {class:"card-sub mb12"}, t("trajectory_source")));
     const grid = el("div", {class:"grid-4"});
     const cell = (label, value, color) => {
@@ -924,6 +1101,7 @@
     const tab = document.getElementById("tab-site");
     tab.innerHTML = "";
     if (!payload.site || !payload.site.length) return;
+    tab.appendChild(titleWithInfo(t("site_title"), "site"));
     tab.appendChild(el("div", {class:"card-sub mb12"}, t("site_source")));
     const wrap = el("div", {class:"tbl-wrap"});
     const table = el("table");
@@ -960,7 +1138,7 @@
     if (!payload.context) return;
     const ctx = payload.context;
     const card = el("div", {class:"card mb16"});
-    card.appendChild(el("div", {class:"card-title"}, t("context_title", ctx.country)));
+    card.appendChild(titleWithInfo(t("context_title", ctx.country), "context"));
     card.appendChild(el("div", {class:"card-sub mb12"}, t("context_source")));
     const grid = el("div", {class:"grid-4"});
     const score = ctx.ndgain != null ? Number(ctx.ndgain).toFixed(1) : "—";
@@ -997,22 +1175,47 @@
     return f < 35 ? "#d8607a" : f < 55 ? "var(--amber)" : "#8bbc3a";
   }
 
-  // Methodology panel content is now driven by LOCALES so it switches
-  // alongside the rest of the dashboard. Static HTML stripped from
-  // index.html.
+  // Methodology panel: structured table of all data sources + score formula
+  // + limitations. Content lives in LOCALES so it switches with the active
+  // language. Stripped of static HTML in index.html.
   function renderMethodology(_payload) {
     const tab = document.getElementById("tab-methodology");
     tab.innerHTML = "";
     const card = el("div", {class:"card"});
     card.appendChild(el("div", {class:"card-title"}, t("methodology_title")));
-    const ul = el("ul", {class:"meth"});
-    (t("methodology_items") || []).forEach(([key, body]) => {
-      const li = el("li");
-      li.appendChild(el("strong", {}, key));
-      li.appendChild(document.createTextNode(" " + body));
-      ul.appendChild(li);
+    card.appendChild(el("div", {class:"card-sub mb12"}, t("methodology_intro")));
+
+    // Sources table
+    const tblWrap = el("div", {class:"tbl-wrap"});
+    const table = el("table");
+    const thead = el("thead");
+    const trh = el("tr");
+    const headers = t("methodology_table_headers") || [];
+    headers.forEach((h, i) => trh.appendChild(el("th", {class: i >= 2 ? "ccenter" : ""}, h)));
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    const tbody = el("tbody");
+    (t("methodology_sources") || []).forEach(s => {
+      const tr = el("tr");
+      tr.appendChild(el("td", {class:"bname"}, s.source));
+      tr.appendChild(el("td", {}, s.purpose));
+      tr.appendChild(el("td", {class:"ccenter"}, s.resolution));
+      tr.appendChild(el("td", {class:"ccenter"}, s.vintage));
+      tr.appendChild(el("td", {class:"ccenter"}, s.license));
+      tbody.appendChild(tr);
     });
-    card.appendChild(ul);
+    table.appendChild(tbody);
+    tblWrap.appendChild(table);
+    card.appendChild(tblWrap);
+
+    // Score formula
+    card.appendChild(el("div", {class:"meth-section-title"}, t("methodology_score_title")));
+    card.appendChild(el("div", {class:"meth-section-body"}, t("methodology_score_body")));
+
+    // Limitations
+    card.appendChild(el("div", {class:"meth-section-title"}, t("methodology_limitations_title")));
+    card.appendChild(el("div", {class:"meth-section-body"}, t("methodology_limitations_body")));
+
     tab.appendChild(card);
   }
 
