@@ -113,6 +113,53 @@ a{color:inherit;text-decoration:none;}
 .panel{display:none;}
 .panel.active{display:block;}
 
+/* Summary narrative ------------------------------------------------- */
+/* Plain-language portfolio digest at the top of the Summary tab. Built
+   client-side from existing payload fields. Bold spans highlight the
+   numbers a reader's eye should land on first. */
+.summary-narrative{
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:10px;padding:14px 18px;margin-bottom:16px;
+  font-size:0.95rem;line-height:1.55;color:var(--text);
+}
+.summary-narrative strong{color:var(--cream);font-weight:600;}
+
+/* Methodology section headings (in the Methodology tab) ------------- */
+.meth-section-title{
+  margin-top:18px;margin-bottom:6px;
+  font-size:0.95rem;font-weight:600;color:var(--cream);
+}
+.meth-section-body{
+  font-size:0.88rem;line-height:1.55;color:var(--text);
+}
+
+/* Per-panel resolution / methodology callouts ----------------------- */
+/* Little "ⓘ" next to each panel's title that expands to show resolution,
+   dataset version, license, and known limitations. Native <details>
+   element keeps it accessible without JS. */
+.panel-info{display:inline-block;margin-left:8px;vertical-align:middle;}
+.panel-info > summary{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--surface-3);color:var(--text-dim);
+  font-size:0.78rem;font-weight:600;cursor:pointer;
+  user-select:none;list-style:none;border:1px solid var(--border);
+  transition:color .12s, border-color .12s, background .12s;
+}
+.panel-info > summary::-webkit-details-marker{display:none;}
+.panel-info > summary:hover{color:var(--cream);border-color:var(--border-strong);}
+.panel-info[open] > summary{color:var(--cream);background:var(--hover);}
+.panel-info-body{
+  margin-top:8px;padding:12px 14px;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:8px;font-size:0.82rem;line-height:1.5;
+  color:var(--text);font-weight:normal;letter-spacing:normal;
+  text-transform:none;max-width:560px;
+}
+.panel-info-body strong{color:var(--cream);font-weight:600;}
+.panel-info-body .pi-row{margin-bottom:6px;}
+.panel-info-body .pi-row:last-child{margin-bottom:0;}
+
 /* Coverage banner --------------------------------------------------- */
 /* Appears above the KPI row on the Summary tab when not all uploaded
    branches could be assessed. Color intensifies with how much is missing. */
