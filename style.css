@@ -1,6 +1,13 @@
 /* Portia dashboard template — Atram brand styling. The shape mirrors
    what the Python tool used to render server-side; client-side JS in
    app.js populates the dynamic content. */
+
+/* Honour the HTML `hidden` attribute even when class rules below set
+   `display: flex` / `inline-block` / etc. The UA stylesheet's
+   `[hidden]{display:none}` has the same specificity as a class
+   selector, so author class rules can accidentally re-show hidden
+   elements. This explicit !important rule keeps `hidden` authoritative. */
+[hidden]{display:none !important;}
 :root,
 :root[data-theme="dark"]{
   --bg:#25231f;
