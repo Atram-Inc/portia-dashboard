@@ -32,6 +32,9 @@
  *     coverage: {                    // optional; absent on older payloads
  *       uploaded: 190, matched: 165, unmatched: 25
  *     } | null,
+ *     score_dimensions: null,        // reserved for future multi-dim
+ *                                    // methodology (e.g. acute / chronic /
+ *                                    // trajectory). Null in v1.
  *     water: { country, water_stress: {v, label}, drought: {v, label}, region } | null,
  *     trajectory: { country, base_tas, fut_tas, d_tas, d_pr } | null,
  *     site: [ { name, city, t2m, t2m_max, t2m_min, precip, wind } ] | null,
