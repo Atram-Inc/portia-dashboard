@@ -29,6 +29,9 @@
  *       ...
  *     ],
  *     branches_note: "Showing 75 of 190..." | null,
+ *     coverage: {                    // optional; absent on older payloads
+ *       uploaded: 190, matched: 165, unmatched: 25
+ *     } | null,
  *     water: { country, water_stress: {v, label}, drought: {v, label}, region } | null,
  *     trajectory: { country, base_tas, fut_tas, d_tas, d_pr } | null,
  *     site: [ { name, city, t2m, t2m_max, t2m_min, precip, wind } ] | null,
@@ -101,11 +104,17 @@
 
       // Summary tab
       kpi_total: "Total branches",
+      kpi_coverage: "Coverage",
       kpi_high: "High risk",
       kpi_medium: "Medium risk",
       kpi_low: "Low risk",
       kpi_avg: "Avg. score",
       kpi_top_hazard: "Top hazard",
+      coverage_tooltip: (matched, total) => `${matched} of ${total} branches assessed`,
+      coverage_banner_lead: (unmatched, total) =>
+        `${unmatched} of ${total} branches could not be assessed.`,
+      coverage_banner_hint:
+        'Filter the Branch Risk Table by Match → "not found" to see them.',
       hazard_profile_title: "Hazard exposure profile (portfolio mean, 0–4 scale)",
       worst_branch_title: "Worst-exposed branch",
       best_branch_title: "Best-positioned branch",
@@ -227,11 +236,17 @@
 
       // Summary tab
       kpi_total: "Sucursales totales",
+      kpi_coverage: "Cobertura",
       kpi_high: "Riesgo alto",
       kpi_medium: "Riesgo medio",
       kpi_low: "Riesgo bajo",
       kpi_avg: "Puntaje promedio",
       kpi_top_hazard: "Amenaza principal",
+      coverage_tooltip: (matched, total) => `${matched} de ${total} sucursales evaluadas`,
+      coverage_banner_lead: (unmatched, total) =>
+        `${unmatched} de ${total} sucursales no pudieron ser evaluadas.`,
+      coverage_banner_hint:
+        'Filtra la Tabla de riesgo por sucursal en Coincidencia → "sin coincidencia" para verlas.',
       hazard_profile_title: "Perfil de exposición a amenazas (promedio del portafolio, escala 0–4)",
       worst_branch_title: "Sucursal más expuesta",
       best_branch_title: "Sucursal mejor posicionada",
@@ -451,6 +466,31 @@
     if (v >= 1) return "#fde047";
     return "#8bbc3a";
   }
+  // Coverage color and banner — surface partial branch coverage prominently.
+  // Thresholds: 100% green, 95-99% yellow, 90-94% amber, 70-89% amber-strong,
+  // < 70% red.
+  function coverageColor(pct) {
+    if (pct >= 100) return "#8bbc3a";
+    if (pct >= 95)  return "var(--yellow)";
+    if (pct >= 70)  return "var(--amber)";
+    return "#d8607a";
+  }
+  function renderCoverageBanner(banner, cov) {
+    banner.innerHTML = "";
+    banner.className = "coverage-banner";
+    if (!cov || !cov.unmatched || cov.unmatched <= 0) {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+    const pct = cov.uploaded > 0 ? (cov.matched / cov.uploaded) * 100 : 100;
+    banner.classList.add(pct < 70 ? "cb-alert" : "cb-warn");
+    banner.appendChild(el("span", {class:"coverage-banner-icon", "aria-hidden":"true"}, "⚠"));
+    const txt = el("div", {class:"coverage-banner-text"});
+    txt.appendChild(el("strong", {}, t("coverage_banner_lead", cov.unmatched, cov.uploaded)));
+    txt.appendChild(document.createTextNode(" " + t("coverage_banner_hint")));
+    banner.appendChild(txt);
+  }
 
   // Hazard name lookup: prefers the payload's `code` field; falls back to
   // reverse-mapping the English `name` if no code is present (older payloads).
@@ -527,6 +567,22 @@
     const kpis = document.getElementById("kpis");
     kpis.innerHTML = "";
 
+    // Coverage banner + KPI. payload.coverage is added by the Python tool;
+    // fall back to kpi.total for older payloads (treat as full coverage).
+    const cov = payload.coverage || {
+      uploaded: payload.kpi.total,
+      matched: payload.kpi.total,
+      unmatched: 0,
+    };
+    const coverageBanner = document.getElementById("coverage-banner");
+    if (coverageBanner) renderCoverageBanner(coverageBanner, cov);
+
+    const pct = cov.uploaded > 0
+      ? Math.round((cov.matched / cov.uploaded) * 100)
+      : 100;
+    const covColor = coverageColor(pct);
+    const covTitle = t("coverage_tooltip", cov.matched, cov.uploaded);
+
     // Resolve top-hazard display: prefer kpi.top_hazard_code (stable), fall
     // back to reverse-mapping the English label.
     let topHazardDisplay = "—";
@@ -538,17 +594,20 @@
     }
 
     const cards = [
-      [t("kpi_total"),       String(payload.kpi.total),  "var(--cream)"],
-      [t("kpi_high"),        String(payload.kpi.high),   "#d8607a"],
-      [t("kpi_medium"),      String(payload.kpi.medium), "var(--amber)"],
-      [t("kpi_low"),         String(payload.kpi.low),    "#8bbc3a"],
-      [t("kpi_avg"),         String(payload.kpi.avg),    "var(--yellow)"],
-      [t("kpi_top_hazard"),  topHazardDisplay,           "var(--cream)"],
+      {label: t("kpi_total"),       value: String(cov.uploaded), color: "var(--cream)"},
+      {label: t("kpi_coverage"),    value: pct + "%",            color: covColor, title: covTitle},
+      {label: t("kpi_high"),        value: String(payload.kpi.high),   color: "#d8607a"},
+      {label: t("kpi_medium"),      value: String(payload.kpi.medium), color: "var(--amber)"},
+      {label: t("kpi_low"),         value: String(payload.kpi.low),    color: "#8bbc3a"},
+      {label: t("kpi_avg"),         value: String(payload.kpi.avg),    color: "var(--yellow)"},
+      {label: t("kpi_top_hazard"),  value: topHazardDisplay,           color: "var(--cream)"},
     ];
-    cards.forEach(([label, value, color]) => {
-      const c = el("div", {class:"kpi"});
-      c.appendChild(el("div", {class:"kpi-v", style:`color:${color}`}, value));
-      c.appendChild(el("div", {class:"kpi-l"}, label));
+    cards.forEach(card => {
+      const attrs = {class:"kpi"};
+      if (card.title) attrs.title = card.title;
+      const c = el("div", attrs);
+      c.appendChild(el("div", {class:"kpi-v", style:`color:${card.color}`}, card.value));
+      c.appendChild(el("div", {class:"kpi-l"}, card.label));
       kpis.appendChild(c);
     });
 
