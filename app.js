@@ -1,8 +1,9 @@
-/* Portia dashboard template — client-side renderer
- * Reads the `?d=<base64url-gzipped-json>` URL parameter, decompresses it,
- * and populates the HTML scaffold in index.html with the FSP's data.
+/* Portia dashboard template — client-side renderer with i18n.
+ * Reads `?d=<base64url-gzipped-json>` (or `?id=<gist_id>`), plus
+ * optional `?lang=<en|es>`, decompresses/fetches the payload, and
+ * populates the HTML scaffold in index.html with the FSP's data.
  *
- * Expected payload shape (see _build_payload() in the Python tool):
+ * Expected payload shape (see _build_dashboard_payload() in the Python tool):
  *
  *   {
  *     v: 1,                          // payload version
@@ -12,16 +13,18 @@
  *     source_note: "Source: ..." | null,
  *     kpi: {
  *       total: 190, high: 96, medium: 94, low: 0,
- *       avg: 20.2, top_hazard_label: "Landslide"
+ *       avg: 20.2,
+ *       top_hazard_code: "LS",         // hazard code, stable across langs
+ *       top_hazard_label: "Landslide"  // English fallback if no code
  *     },
- *     tier: { label: "High", color: "#96253a" },
- *     hazards: [                     // 8 entries, all hazards in order
+ *     tier: { label: "High", color: "#96253a" },  // canonical English
+ *     hazards: [
  *       { code:"EQ", name:"Earthquake", value: 3.0 },
  *       ...
  *     ],
  *     worst: { name, city, score, tier } | null,
  *     best:  { name, city, score, tier } | null,
- *     branches: [                    // up to 75 displayed
+ *     branches: [
  *       { name, city, state, match_type, score, tier, h:[0-4]*8 },
  *       ...
  *     ],
@@ -31,22 +34,339 @@
  *     site: [ { name, city, t2m, t2m_max, t2m_min, precip, wind } ] | null,
  *     context: { country, ndgain, vulnerability, readiness } | null
  *   }
+ *
+ * String fields in the payload (tier.label, hazards[i].name, kpi.top_hazard_label,
+ * branches[].tier, branches[].match_type) are emitted in canonical English by
+ * the Python tool. The dashboard maps them client-side to the active language
+ * via the LOCALES dict below. Hazard codes (EQ, TS, ...) and tier labels
+ * (High, Medium, Low, Unmatched) are the join keys — keep them in sync with
+ * the Python tool's HAZARDS / _risk_tier values.
  */
 
 (function () {
   "use strict";
 
-  const HAZARDS = ["EQ","TS","CY","FL","UF","CF","LS","EH"];
-  const LEVEL_LABELS = ["No Data","Very Low","Low","Medium","High"];
+  const SUPPORTED_LANGS = ["en", "es"];
+  const LANG_STORAGE_KEY = "portia.lang";
+  const HAZARD_CODES = ["EQ","TS","CY","FL","UF","CF","LS","EH"];
+
+  // ── i18n strings ────────────────────────────────────────────────────
+  const LOCALES = {
+    en: {
+      // Page chrome
+      app_eyebrow: "Portfolio Climate Risk Assessment",
+      sidebar_section: "Climate Risk",
+      page_title: (fsp) => `Portia PCRA — ${fsp}`,
+      portfolio_tier: (tier) => `Portfolio · ${tier}`,
+      error_title: "Could not render dashboard",
+      error_body: "The dashboard payload couldn't be parsed.",
+
+      // Nav
+      nav_summary: "Executive Summary",
+      nav_branches: "Branch Risk Table",
+      nav_water: "Water Risk",
+      nav_trajectory: "Climate Trajectory",
+      nav_site: "Site Climate",
+      nav_context: "Country Context",
+      nav_methodology: "Methodology",
+
+      // Hazards (mapped from payload code → display name)
+      hazard_EQ: "Earthquake",
+      hazard_TS: "Tsunami",
+      hazard_CY: "Cyclone",
+      hazard_FL: "River Flood",
+      hazard_UF: "Urban Flood",
+      hazard_CF: "Coastal Flood",
+      hazard_LS: "Landslide",
+      hazard_EH: "Extreme Heat",
+
+      // Tiers (canonical English → display)
+      tier_High: "High",
+      tier_Medium: "Medium",
+      tier_Low: "Low",
+      tier_Unmatched: "Unmatched",
+
+      // Levels (0..4)
+      level_0: "No Data",
+      level_1: "Very Low",
+      level_2: "Low",
+      level_3: "Medium",
+      level_4: "High",
+
+      // Match types
+      match_exact: "exact",
+      match_fuzzy: "fuzzy",
+      match_region: "region",
+      match_not_found: "not found",
+
+      // Summary tab
+      kpi_total: "Total branches",
+      kpi_high: "High risk",
+      kpi_medium: "Medium risk",
+      kpi_low: "Low risk",
+      kpi_avg: "Avg. score",
+      kpi_top_hazard: "Top hazard",
+      hazard_profile_title: "Hazard exposure profile (portfolio mean, 0–4 scale)",
+      worst_branch_title: "Worst-exposed branch",
+      best_branch_title: "Best-positioned branch",
+      score_word: "score",
+
+      // Branch table
+      filter_search: "Search",
+      filter_search_placeholder: "Branch or city…",
+      filter_region: "Region",
+      filter_tier: "Tier",
+      filter_match: "Match",
+      filter_all: "All",
+      filter_reset: "Reset",
+      branch_count_all: (n) => `${n} branches`,
+      branch_count_filtered: (shown, total) => `${shown} of ${total} branches shown`,
+      table_col_branch: "Branch",
+      table_col_city: "City",
+      table_col_region: "Region",
+      table_col_match: "Match",
+      table_col_score: "Score",
+      table_col_tier: "Tier",
+
+      // Water tab
+      water_title: (country) => `🌊 Water risk — ${country}`,
+      water_source: "Source: WRI Aqueduct 4.0 country-level baseline (scored 0 = no risk, 5 = extreme).",
+      water_stress: "Water stress",
+      water_drought: "Drought",
+      water_region: (r) => `Region: ${r}`,
+
+      // Trajectory tab
+      trajectory_title: (country) => `📈 Climate trajectory — ${country}`,
+      trajectory_source: "CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline. Source: World Bank CCKP.",
+      trajectory_base_temp: "Baseline temp",
+      trajectory_future_temp: "2050 temp",
+      trajectory_delta_temp: "Δ temperature",
+      trajectory_delta_precip: "Δ precipitation",
+
+      // Site tab
+      site_source: "Annual climatology averages at each branch's coordinates (NASA POWER 30-year climatology).",
+      site_col_branch: "Branch",
+      site_col_city: "City",
+      site_col_mean_t: "Mean T (°C)",
+      site_col_max_t: "Max T (°C)",
+      site_col_min_t: "Min T (°C)",
+      site_col_precip: "Precip (mm/day)",
+      site_col_wind: "Wind 10m (m/s)",
+
+      // Context tab
+      context_title: (country) => `🌱 Country context — ${country}`,
+      context_source: "Source: ND-GAIN Country Index — overall climate-adaptation score (0–100, higher is better), broken into vulnerability (0–1, lower is better) and readiness (0–1, higher is better).",
+      context_ndgain: "ND-GAIN score",
+      context_vulnerability: "Vulnerability",
+      context_readiness: "Readiness",
+      context_lower_better: "lower is better",
+      context_higher_better: "higher is better",
+
+      // Methodology tab
+      methodology_title: "📘 Methodology & Data Sources",
+      methodology_items: [
+        ["Hazard screening (ADM2):", "GFDRR ThinkHazard v2 — 8 hazards each scored 0–4."],
+        ["Score normalisation:", "Sum of reported hazards × (8 / n_reported). Tier thresholds: High ≥ 20, Medium 12–19, Low < 12."],
+        ["Water risk:", "WRI Aqueduct 4.0 country-level baseline (water stress, drought)."],
+        ["Climate trajectory:", "World Bank CCKP — CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline."],
+        ["Site climate:", "NASA POWER 30-year climatology at branch coordinates."],
+        ["Country context:", "ND-GAIN Country Index for vulnerability + adaptation readiness."],
+        ["Geocoding:", "GeoNames cities500 index (CC BY 4.0) plus ADM2 centroids baked into ThinkHazard."],
+        ["Limitations:", "ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure."],
+      ],
+
+      // Footer
+      footer_text: "Created by Portia, your personal climate analyst",
+    },
+    es: {
+      // Page chrome
+      app_eyebrow: "Evaluación de Riesgo Climático del Portafolio",
+      sidebar_section: "Riesgo climático",
+      page_title: (fsp) => `Portia PCRA — ${fsp}`,
+      portfolio_tier: (tier) => `Cartera · ${tier}`,
+      error_title: "No se pudo renderizar el panel",
+      error_body: "No se pudo procesar el contenido del panel.",
+
+      // Nav
+      nav_summary: "Resumen ejecutivo",
+      nav_branches: "Tabla de riesgo por sucursal",
+      nav_water: "Riesgo hídrico",
+      nav_trajectory: "Trayectoria climática",
+      nav_site: "Clima del sitio",
+      nav_context: "Contexto del país",
+      nav_methodology: "Metodología",
+
+      // Hazards
+      hazard_EQ: "Terremoto",
+      hazard_TS: "Tsunami",
+      hazard_CY: "Ciclón",
+      hazard_FL: "Inundación fluvial",
+      hazard_UF: "Inundación urbana",
+      hazard_CF: "Inundación costera",
+      hazard_LS: "Deslizamiento",
+      hazard_EH: "Calor extremo",
+
+      // Tiers
+      tier_High: "Alto",
+      tier_Medium: "Medio",
+      tier_Low: "Bajo",
+      tier_Unmatched: "Sin coincidencia",
+
+      // Levels
+      level_0: "Sin datos",
+      level_1: "Muy bajo",
+      level_2: "Bajo",
+      level_3: "Medio",
+      level_4: "Alto",
+
+      // Match types
+      match_exact: "exacta",
+      match_fuzzy: "aproximada",
+      match_region: "región",
+      match_not_found: "sin coincidencia",
+
+      // Summary tab
+      kpi_total: "Sucursales totales",
+      kpi_high: "Riesgo alto",
+      kpi_medium: "Riesgo medio",
+      kpi_low: "Riesgo bajo",
+      kpi_avg: "Puntaje promedio",
+      kpi_top_hazard: "Amenaza principal",
+      hazard_profile_title: "Perfil de exposición a amenazas (promedio del portafolio, escala 0–4)",
+      worst_branch_title: "Sucursal más expuesta",
+      best_branch_title: "Sucursal mejor posicionada",
+      score_word: "puntaje",
+
+      // Branch table
+      filter_search: "Buscar",
+      filter_search_placeholder: "Sucursal o ciudad…",
+      filter_region: "Región",
+      filter_tier: "Nivel",
+      filter_match: "Coincidencia",
+      filter_all: "Todos",
+      filter_reset: "Restablecer",
+      branch_count_all: (n) => `${n} sucursales`,
+      branch_count_filtered: (shown, total) => `${shown} de ${total} sucursales mostradas`,
+      table_col_branch: "Sucursal",
+      table_col_city: "Ciudad",
+      table_col_region: "Región",
+      table_col_match: "Coincidencia",
+      table_col_score: "Puntaje",
+      table_col_tier: "Nivel",
+
+      // Water tab
+      water_title: (country) => `🌊 Riesgo hídrico — ${country}`,
+      water_source: "Fuente: línea base nacional WRI Aqueduct 4.0 (puntuado 0 = sin riesgo, 5 = extremo).",
+      water_stress: "Estrés hídrico",
+      water_drought: "Sequía",
+      water_region: (r) => `Región: ${r}`,
+
+      // Trajectory tab
+      trajectory_title: (country) => `📈 Trayectoria climática — ${country}`,
+      trajectory_source: "Ensamble CMIP6 SSP2-4.5, 2040–2059 vs. línea base CRU 1991–2020. Fuente: World Bank CCKP.",
+      trajectory_base_temp: "Temp. base",
+      trajectory_future_temp: "Temp. 2050",
+      trajectory_delta_temp: "Δ temperatura",
+      trajectory_delta_precip: "Δ precipitación",
+
+      // Site tab
+      site_source: "Promedios climatológicos anuales en las coordenadas de cada sucursal (climatología NASA POWER de 30 años).",
+      site_col_branch: "Sucursal",
+      site_col_city: "Ciudad",
+      site_col_mean_t: "T media (°C)",
+      site_col_max_t: "T máx (°C)",
+      site_col_min_t: "T mín (°C)",
+      site_col_precip: "Precip (mm/día)",
+      site_col_wind: "Viento 10m (m/s)",
+
+      // Context tab
+      context_title: (country) => `🌱 Contexto del país — ${country}`,
+      context_source: "Fuente: Índice de País ND-GAIN — puntuación general de adaptación climática (0–100, mayor es mejor), desglosada en vulnerabilidad (0–1, menor es mejor) y preparación (0–1, mayor es mejor).",
+      context_ndgain: "Puntaje ND-GAIN",
+      context_vulnerability: "Vulnerabilidad",
+      context_readiness: "Preparación",
+      context_lower_better: "menor es mejor",
+      context_higher_better: "mayor es mejor",
+
+      // Methodology tab
+      methodology_title: "📘 Metodología y fuentes de datos",
+      methodology_items: [
+        ["Detección de amenazas (ADM2):", "GFDRR ThinkHazard v2 — 8 amenazas cada una puntuada 0–4."],
+        ["Normalización del puntaje:", "Suma de amenazas reportadas × (8 / n_reportadas). Umbrales: Alto ≥ 20, Medio 12–19, Bajo < 12."],
+        ["Riesgo hídrico:", "Línea base nacional WRI Aqueduct 4.0 (estrés hídrico, sequía)."],
+        ["Trayectoria climática:", "World Bank CCKP — ensamble CMIP6 SSP2-4.5, 2040–2059 vs. línea base CRU 1991–2020."],
+        ["Clima del sitio:", "Climatología NASA POWER de 30 años en las coordenadas de las sucursales."],
+        ["Contexto del país:", "Índice de País ND-GAIN para vulnerabilidad y preparación de adaptación."],
+        ["Geocodificación:", "Índice GeoNames cities500 (CC BY 4.0) más centroides ADM2 incorporados en ThinkHazard."],
+        ["Limitaciones:", "La metodología ThinkHazard v2 es de 2017; la granularidad ADM2 puede ser más gruesa que la exposición real de una sucursal."],
+      ],
+
+      // Footer
+      footer_text: "Creado por Portia, tu analista climático personal",
+    },
+  };
+
+  // Reverse map from canonical English hazard label (used in older
+  // payloads or as a fallback when top_hazard_code is missing) to code.
+  const HAZARD_LABEL_TO_CODE = {
+    "Earthquake": "EQ", "Tsunami": "TS", "Cyclone": "CY",
+    "River Flood": "FL", "Urban Flood": "UF", "Coastal Flood": "CF",
+    "Landslide": "LS", "Extreme Heat": "EH",
+  };
+
+  // Mutable runtime state — currentLang is initialized at main(); cachedPayload
+  // is the parsed payload, kept so we can re-render on language switch without
+  // refetching.
+  let currentLang = "en";
+  let cachedPayload = null;
+
   const NAV_DEFS = [
-    {slug:"summary",     label:"Executive Summary"},
-    {slug:"branches",    label:"Branch Risk Table"},
-    {slug:"water",       label:"Water Risk"},
-    {slug:"trajectory",  label:"Climate Trajectory"},
-    {slug:"site",        label:"Site Climate"},
-    {slug:"context",     label:"Country Context"},
-    {slug:"methodology", label:"Methodology"},
+    {slug:"summary",     key:"nav_summary"},
+    {slug:"branches",    key:"nav_branches"},
+    {slug:"water",       key:"nav_water"},
+    {slug:"trajectory",  key:"nav_trajectory"},
+    {slug:"site",        key:"nav_site"},
+    {slug:"context",     key:"nav_context"},
+    {slug:"methodology", key:"nav_methodology"},
   ];
+
+  // ── i18n helpers ────────────────────────────────────────────────────
+  function detectInitialLang() {
+    try {
+      const u = new URLSearchParams(window.location.search).get("lang");
+      if (u) {
+        const norm = u.toLowerCase().slice(0, 2);
+        if (SUPPORTED_LANGS.includes(norm)) return norm;
+      }
+      const stored = localStorage.getItem(LANG_STORAGE_KEY);
+      if (stored && SUPPORTED_LANGS.includes(stored)) return stored;
+      const nav = (navigator.language || "en").toLowerCase().slice(0, 2);
+      if (SUPPORTED_LANGS.includes(nav)) return nav;
+    } catch (_) { /* ignore */ }
+    return "en";
+  }
+
+  function t(key, ...args) {
+    const locale = LOCALES[currentLang] || LOCALES.en;
+    let v = locale[key];
+    if (v == null) v = LOCALES.en[key];
+    if (v == null) return key;
+    return typeof v === "function" ? v(...args) : v;
+  }
+
+  function setLang(lang) {
+    if (!SUPPORTED_LANGS.includes(lang) || lang === currentLang) return;
+    currentLang = lang;
+    document.documentElement.setAttribute("lang", lang);
+    try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (_) {}
+    if (!cachedPayload) return;
+    // Preserve the active tab when re-rendering — buildNav re-creates the
+    // nav and would otherwise reset to the first tab.
+    const active = document.querySelector(".nav-item.active");
+    const activeSlug = active ? active.dataset.tab : null;
+    renderAll(cachedPayload);
+    if (activeSlug) setActive(activeSlug);
+  }
 
   // ── URL decode ──────────────────────────────────────────────────────
   async function getPayload() {
@@ -132,6 +452,26 @@
     return "#8bbc3a";
   }
 
+  // Hazard name lookup: prefers the payload's `code` field; falls back to
+  // reverse-mapping the English `name` if no code is present (older payloads).
+  function hazardName(h) {
+    const code = h.code || HAZARD_LABEL_TO_CODE[h.name];
+    return code ? t("hazard_" + code) : (h.name || "");
+  }
+  function tierLabel(tier) {
+    return t("tier_" + tier) || tier;
+  }
+  function levelLabel(v) {
+    return t("level_" + v) || "";
+  }
+  function matchLabel(mt) {
+    if (!mt) return t("match_not_found");
+    if (mt === "exact") return t("match_exact");
+    if (/region/i.test(mt)) return t("match_region");
+    if (/fuzzy/i.test(mt)) return t("match_fuzzy");
+    return t("match_not_found");
+  }
+
   // ── Tab navigation ──────────────────────────────────────────────────
   function setActive(slug) {
     document.querySelectorAll(".nav-item").forEach(n =>
@@ -142,7 +482,8 @@
 
   function buildNav(payload) {
     const nav = document.getElementById("nav");
-    nav.appendChild(el("div", {class:"nav-section"}, "Climate Risk"));
+    nav.innerHTML = "";
+    nav.appendChild(el("div", {class:"nav-section"}, t("sidebar_section")));
     const visible = NAV_DEFS.filter(d => {
       if (d.slug === "summary" || d.slug === "branches" || d.slug === "methodology") return true;
       if (d.slug === "water") return !!payload.water;
@@ -157,7 +498,7 @@
         "data-tab": d.slug,
       });
       a.appendChild(el("span", {class:"nav-ico nav-ico-" + d.slug}));
-      a.appendChild(el("span", {}, d.label));
+      a.appendChild(el("span", {}, t(d.key)));
       a.addEventListener("click", () => setActive(d.slug));
       nav.appendChild(a);
     });
@@ -165,6 +506,9 @@
 
   // ── Panel renderers ─────────────────────────────────────────────────
   function renderTopbar(payload) {
+    const eyebrow = document.getElementById("topbar-eyebrow");
+    if (eyebrow) eyebrow.textContent = t("app_eyebrow");
+
     const title = document.getElementById("title");
     const country = payload.country_display || "";
     title.innerHTML = "";
@@ -174,20 +518,32 @@
       title.appendChild(el("span", {class:"topbar-country"}, country));
     }
     const chip = document.getElementById("tier-chip");
-    chip.textContent = `Portfolio · ${payload.tier.label}`;
+    chip.textContent = t("portfolio_tier", tierLabel(payload.tier.label));
     chip.style.background = payload.tier.color;
-    document.title = `Portia PCRA — ${payload.fsp_name}`;
+    document.title = t("page_title", payload.fsp_name);
   }
 
   function renderSummary(payload) {
     const kpis = document.getElementById("kpis");
+    kpis.innerHTML = "";
+
+    // Resolve top-hazard display: prefer kpi.top_hazard_code (stable), fall
+    // back to reverse-mapping the English label.
+    let topHazardDisplay = "—";
+    if (payload.kpi.top_hazard_code) {
+      topHazardDisplay = t("hazard_" + payload.kpi.top_hazard_code);
+    } else if (payload.kpi.top_hazard_label) {
+      const code = HAZARD_LABEL_TO_CODE[payload.kpi.top_hazard_label];
+      topHazardDisplay = code ? t("hazard_" + code) : payload.kpi.top_hazard_label;
+    }
+
     const cards = [
-      ["Total branches", String(payload.kpi.total), "var(--cream)"],
-      ["High risk", String(payload.kpi.high), "#d8607a"],
-      ["Medium risk", String(payload.kpi.medium), "var(--amber)"],
-      ["Low risk", String(payload.kpi.low), "#8bbc3a"],
-      ["Avg. score", String(payload.kpi.avg), "var(--yellow)"],
-      ["Top hazard", payload.kpi.top_hazard_label || "—", "var(--cream)"],
+      [t("kpi_total"),       String(payload.kpi.total),  "var(--cream)"],
+      [t("kpi_high"),        String(payload.kpi.high),   "#d8607a"],
+      [t("kpi_medium"),      String(payload.kpi.medium), "var(--amber)"],
+      [t("kpi_low"),         String(payload.kpi.low),    "#8bbc3a"],
+      [t("kpi_avg"),         String(payload.kpi.avg),    "var(--yellow)"],
+      [t("kpi_top_hazard"),  topHazardDisplay,           "var(--cream)"],
     ];
     cards.forEach(([label, value, color]) => {
       const c = el("div", {class:"kpi"});
@@ -196,10 +552,17 @@
       kpis.appendChild(c);
     });
 
+    // Update the static "Hazard exposure profile" section title.
+    const summaryPanel = document.getElementById("tab-summary");
+    const sectionTitle = summaryPanel
+      ? summaryPanel.querySelector(".section-title") : null;
+    if (sectionTitle) sectionTitle.textContent = t("hazard_profile_title");
+
     const bars = document.getElementById("hazard-bars");
+    bars.innerHTML = "";
     payload.hazards.forEach(h => {
       const row = el("div", {class:"hbar-row"});
-      row.appendChild(el("div", {class:"hbar-l"}, h.name));
+      row.appendChild(el("div", {class:"hbar-l"}, hazardName(h)));
       const track = el("div", {class:"hbar-track"});
       track.appendChild(el("div", {
         class:"hbar-fill",
@@ -211,10 +574,11 @@
     });
 
     const wb = document.getElementById("worst-best");
+    wb.innerHTML = "";
     if (payload.worst && payload.best && payload.worst.name !== payload.best.name) {
       const grid = el("div", {class:"grid-2 mt24"});
-      grid.appendChild(makeWB(payload.worst, "bad", "Worst-exposed branch"));
-      grid.appendChild(makeWB(payload.best, "good", "Best-positioned branch"));
+      grid.appendChild(makeWB(payload.worst, "bad", t("worst_branch_title")));
+      grid.appendChild(makeWB(payload.best, "good", t("best_branch_title")));
       wb.appendChild(grid);
     }
   }
@@ -223,8 +587,8 @@
     c.appendChild(el("div", {class:"card-title"}, title));
     c.appendChild(el("div", {class:"card-big"}, b.name));
     const sub = el("div", {class:"card-sub"});
-    sub.appendChild(document.createTextNode(`${b.city} · score ${b.score} · `));
-    sub.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, b.tier));
+    sub.appendChild(document.createTextNode(`${b.city} · ${t("score_word")} ${b.score} · `));
+    sub.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, tierLabel(b.tier)));
     c.appendChild(sub);
     return c;
   }
@@ -244,30 +608,32 @@
     sortDir: 1,
   };
 
+  // Bucket the raw match_type into a canonical key for filtering. The key
+  // is language-independent ("exact" / "fuzzy" / "region" / "not_found"); the
+  // dropdown shows the localized display via matchLabel().
   function matchBucket(mt) {
-    if (!mt) return "not found";
+    if (!mt) return "not_found";
     if (mt === "exact") return "exact";
     if (/region/i.test(mt)) return "region";
     if (/fuzzy/i.test(mt)) return "fuzzy";
-    return "not found";
+    return "not_found";
   }
 
   function renderBranches(payload) {
-    if (payload.branches_note) {
-      document.getElementById("branches-note").textContent = payload.branches_note;
-    }
+    const noteEl = document.getElementById("branches-note");
+    noteEl.textContent = payload.branches_note || "";
 
     const hazardCols = payload.hazards.map((h, i) => ({
-      label: h.name, align: "center",
+      label: hazardName(h), align: "center",
       value: (b) => (b.h && typeof b.h[i] === "number") ? b.h[i] : -1,
     }));
     const colDefs = [
-      {label:"Branch", align:"left",   value:(b)=>(b.name||"").toLowerCase()},
-      {label:"City",   align:"left",   value:(b)=>(b.city||"").toLowerCase()},
-      {label:"Region", align:"left",   value:(b)=>(b.state||"").toLowerCase()},
-      {label:"Match",  align:"center", value:(b)=>matchBucket(b.match_type)},
-      {label:"Score",  align:"center", value:(b)=>(b.score==null ? -1 : Number(b.score))},
-      {label:"Tier",   align:"center", value:(b)=>(TIER_ORDER[b.tier] || 0)},
+      {label:t("table_col_branch"), align:"left",   value:(b)=>(b.name||"").toLowerCase()},
+      {label:t("table_col_city"),   align:"left",   value:(b)=>(b.city||"").toLowerCase()},
+      {label:t("table_col_region"), align:"left",   value:(b)=>(b.state||"").toLowerCase()},
+      {label:t("table_col_match"),  align:"center", value:(b)=>matchBucket(b.match_type)},
+      {label:t("table_col_score"),  align:"center", value:(b)=>(b.score==null ? -1 : Number(b.score))},
+      {label:t("table_col_tier"),   align:"center", value:(b)=>(TIER_ORDER[b.tier] || 0)},
     ].concat(hazardCols);
 
     const thead = document.getElementById("branch-thead");
@@ -300,11 +666,12 @@
     host.innerHTML = "";
 
     const textWrap = el("label", {class:"branch-filter"});
-    textWrap.appendChild(el("span", {class:"branch-filter-label"}, "Search"));
+    textWrap.appendChild(el("span", {class:"branch-filter-label"}, t("filter_search")));
     const text = el("input", {
-      type:"search", placeholder:"Branch or city…",
+      type:"search", placeholder:t("filter_search_placeholder"),
       class:"branch-filter-input",
     });
+    if (branchState.text) text.value = branchState.text;
     text.addEventListener("input", () => {
       branchState.text = text.value.trim().toLowerCase();
       applyFilters();
@@ -315,26 +682,28 @@
     const regions = Array.from(new Set(
       payload.branches.map(b => (b.state || "").trim())
     )).filter(s => s.length > 0).sort((a,b) => a.localeCompare(b));
-    host.appendChild(makeSelect("Region", regions, (v) => {
-      branchState.region = v; applyFilters();
-    }));
+    host.appendChild(makeSelect(t("filter_region"), regions, branchState.region,
+      (v) => { branchState.region = v; applyFilters(); }));
 
     const tiers = Array.from(new Set(payload.branches.map(b => b.tier || "")))
       .filter(t => t.length > 0)
       .sort((a,b) => (TIER_ORDER[b]||0) - (TIER_ORDER[a]||0));
-    host.appendChild(makeSelect("Tier", tiers, (v) => {
-      branchState.tier = v; applyFilters();
-    }));
+    const tierOpts = tiers.map(canon => ({value: canon, display: tierLabel(canon)}));
+    host.appendChild(makeSelect(t("filter_tier"), tierOpts, branchState.tier,
+      (v) => { branchState.tier = v; applyFilters(); }));
 
     const matchBuckets = Array.from(new Set(
       payload.branches.map(b => matchBucket(b.match_type))
     )).sort();
-    host.appendChild(makeSelect("Match", matchBuckets, (v) => {
-      branchState.match = v; applyFilters();
+    const matchOpts = matchBuckets.map(bk => ({
+      value: bk,
+      display: matchLabel(bk === "not_found" ? "" : bk),
     }));
+    host.appendChild(makeSelect(t("filter_match"), matchOpts, branchState.match,
+      (v) => { branchState.match = v; applyFilters(); }));
 
     const reset = el("button", {type:"button", class:"branch-filter-reset"},
-                     "Reset");
+                     t("filter_reset"));
     reset.addEventListener("click", () => {
       branchState.text = ""; branchState.region = "";
       branchState.tier = ""; branchState.match = "";
@@ -347,14 +716,21 @@
     host.appendChild(reset);
   }
 
-  function makeSelect(label, options, onChange) {
+  // makeSelect accepts options as either an array of strings (value = display)
+  // or an array of {value, display} objects (separate canonical filter key
+  // from localized display label).
+  function makeSelect(label, options, currentValue, onChange) {
     const wrap = el("label", {class:"branch-filter"});
     wrap.appendChild(el("span", {class:"branch-filter-label"}, label));
     const sel = el("select", {class:"branch-filter-input"});
-    sel.appendChild(el("option", {value:""}, "All"));
+    sel.appendChild(el("option", {value:""}, t("filter_all")));
     options.forEach(opt => {
-      sel.appendChild(el("option", {value:opt}, opt));
+      const value = typeof opt === "string" ? opt : opt.value;
+      const display = typeof opt === "string" ? opt : opt.display;
+      const o = el("option", {value: value}, display);
+      sel.appendChild(o);
     });
+    if (currentValue) sel.value = currentValue;
     sel.addEventListener("change", () => onChange(sel.value));
     wrap.appendChild(sel);
     return wrap;
@@ -395,8 +771,8 @@
     const cnt = document.getElementById("branch-count");
     cnt.hidden = false;
     cnt.textContent = (shown === total)
-      ? `${total} branches`
-      : `${shown} of ${total} branches shown`;
+      ? t("branch_count_all", total)
+      : t("branch_count_filtered", shown, total);
 
     const tbody = document.getElementById("branch-tbody");
     tbody.innerHTML = "";
@@ -409,33 +785,34 @@
     tr.appendChild(el("td", {}, b.city || ""));
     tr.appendChild(el("td", {}, b.state || ""));
     const matchTd = el("td", {class:"ccenter"});
-    matchTd.appendChild(el("span", {class:"pill " + matchClass(b.match_type)}, b.match_type));
+    matchTd.appendChild(el("span", {class:"pill " + matchClass(b.match_type)},
+                              matchLabel(b.match_type)));
     tr.appendChild(matchTd);
     tr.appendChild(el("td", {class:"ccenter score"}, b.score == null ? "—" : String(b.score)));
     const tierTd = el("td", {class:"ccenter"});
-    tierTd.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, b.tier));
+    tierTd.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, tierLabel(b.tier)));
     tr.appendChild(tierTd);
     (b.h || []).forEach(v => {
-      tr.appendChild(el("td", {class:"h h" + v}, LEVEL_LABELS[v] || ""));
+      tr.appendChild(el("td", {class:"h h" + v}, levelLabel(v)));
     });
     return tr;
   }
 
   function renderWater(payload) {
+    const tab = document.getElementById("tab-water");
+    tab.innerHTML = "";
     if (!payload.water) return;
     const w = payload.water;
-    const tab = document.getElementById("tab-water");
     const card = el("div", {class:"card mb16"});
-    card.appendChild(el("div", {class:"card-title"}, "🌊 Water risk — " + w.country));
-    card.appendChild(el("div", {class:"card-sub mb12"},
-      "Source: WRI Aqueduct 4.0 country-level baseline (scored 0 = no risk, 5 = extreme)."));
+    card.appendChild(el("div", {class:"card-title"}, t("water_title", w.country)));
+    card.appendChild(el("div", {class:"card-sub mb12"}, t("water_source")));
     const grid = el("div", {class:"grid-2"});
-    grid.appendChild(stressBlock("Water stress", w.water_stress));
-    grid.appendChild(stressBlock("Drought", w.drought));
+    grid.appendChild(stressBlock(t("water_stress"), w.water_stress));
+    grid.appendChild(stressBlock(t("water_drought"), w.drought));
     card.appendChild(grid);
     if (w.region) {
       card.appendChild(el("div", {class:"card-sub", style:"margin-top:10px;"},
-        "Region: " + w.region));
+        t("water_region", w.region)));
     }
     tab.appendChild(card);
   }
@@ -458,13 +835,13 @@
   }
 
   function renderTrajectory(payload) {
-    if (!payload.trajectory) return;
-    const t = payload.trajectory;
     const tab = document.getElementById("tab-trajectory");
+    tab.innerHTML = "";
+    if (!payload.trajectory) return;
+    const tr = payload.trajectory;
     const card = el("div", {class:"card mb16"});
-    card.appendChild(el("div", {class:"card-title"}, "📈 Climate trajectory — " + t.country));
-    card.appendChild(el("div", {class:"card-sub mb12"},
-      "CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline. Source: World Bank CCKP."));
+    card.appendChild(el("div", {class:"card-title"}, t("trajectory_title", tr.country)));
+    card.appendChild(el("div", {class:"card-sub mb12"}, t("trajectory_source")));
     const grid = el("div", {class:"grid-4"});
     const cell = (label, value, color) => {
       const c = el("div");
@@ -472,42 +849,46 @@
       c.appendChild(el("div", {class:"kpi-v", style: color ? `color:${color}` : ""}, value));
       return c;
     };
-    grid.appendChild(cell("Baseline temp", fmt(t.base_tas, 2, " °C")));
-    grid.appendChild(cell("2050 temp", fmt(t.fut_tas, 2, " °C")));
-    const dTas = t.d_tas;
-    grid.appendChild(cell("Δ temperature",
+    grid.appendChild(cell(t("trajectory_base_temp"), fmt(tr.base_tas, 2, " °C")));
+    grid.appendChild(cell(t("trajectory_future_temp"), fmt(tr.fut_tas, 2, " °C")));
+    const dTas = tr.d_tas;
+    grid.appendChild(cell(t("trajectory_delta_temp"),
       (dTas != null && dTas > 0 ? "+" : "") + fmt(dTas, 2, " °C"), "#d8607a"));
-    const dPr = t.d_pr;
-    grid.appendChild(cell("Δ precipitation",
+    const dPr = tr.d_pr;
+    grid.appendChild(cell(t("trajectory_delta_precip"),
       (dPr != null && dPr > 0 ? "+" : "") + fmt(dPr, 2, " %"), "var(--yellow)"));
     card.appendChild(grid);
     tab.appendChild(card);
   }
 
   function renderSite(payload) {
-    if (!payload.site || !payload.site.length) return;
     const tab = document.getElementById("tab-site");
-    tab.appendChild(el("div", {class:"card-sub mb12"},
-      "Annual climatology averages at each branch's coordinates (NASA POWER 30-year climatology)."));
+    tab.innerHTML = "";
+    if (!payload.site || !payload.site.length) return;
+    tab.appendChild(el("div", {class:"card-sub mb12"}, t("site_source")));
     const wrap = el("div", {class:"tbl-wrap"});
     const table = el("table");
     const thead = el("thead");
     const trh = el("tr");
-    ["Branch","City","Mean T (°C)","Max T (°C)","Min T (°C)","Precip (mm/day)","Wind 10m (m/s)"]
-      .forEach((h, i) => trh.appendChild(el("th", {class: i >= 2 ? "ccenter" : ""}, h)));
+    const headers = [
+      t("site_col_branch"), t("site_col_city"), t("site_col_mean_t"),
+      t("site_col_max_t"), t("site_col_min_t"), t("site_col_precip"),
+      t("site_col_wind"),
+    ];
+    headers.forEach((h, i) => trh.appendChild(el("th", {class: i >= 2 ? "ccenter" : ""}, h)));
     thead.appendChild(trh);
     table.appendChild(thead);
     const tbody = el("tbody");
     payload.site.forEach(s => {
-      const tr = el("tr");
-      tr.appendChild(el("td", {}, s.name));
-      tr.appendChild(el("td", {}, s.city || ""));
-      tr.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m)));
-      tr.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m_max)));
-      tr.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m_min)));
-      tr.appendChild(el("td", {class:"ccenter"}, fmt(s.precip)));
-      tr.appendChild(el("td", {class:"ccenter"}, fmt(s.wind)));
-      tbody.appendChild(tr);
+      const row = el("tr");
+      row.appendChild(el("td", {}, s.name));
+      row.appendChild(el("td", {}, s.city || ""));
+      row.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m)));
+      row.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m_max)));
+      row.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m_min)));
+      row.appendChild(el("td", {class:"ccenter"}, fmt(s.precip)));
+      row.appendChild(el("td", {class:"ccenter"}, fmt(s.wind)));
+      tbody.appendChild(row);
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
@@ -515,13 +896,13 @@
   }
 
   function renderContext(payload) {
+    const tab = document.getElementById("tab-context");
+    tab.innerHTML = "";
     if (!payload.context) return;
     const ctx = payload.context;
-    const tab = document.getElementById("tab-context");
     const card = el("div", {class:"card mb16"});
-    card.appendChild(el("div", {class:"card-title"}, "🌱 Country context — " + ctx.country));
-    card.appendChild(el("div", {class:"card-sub mb12"},
-      "Source: ND-GAIN Country Index — overall climate-adaptation score (0–100, higher is better), broken into vulnerability (0–1, lower is better) and readiness (0–1, higher is better)."));
+    card.appendChild(el("div", {class:"card-title"}, t("context_title", ctx.country)));
+    card.appendChild(el("div", {class:"card-sub mb12"}, t("context_source")));
     const grid = el("div", {class:"grid-4"});
     const score = ctx.ndgain != null ? Number(ctx.ndgain).toFixed(1) : "—";
     const vuln = ctx.vulnerability != null ? Number(ctx.vulnerability).toFixed(2) : "—";
@@ -529,21 +910,21 @@
     const colS = gainColor(ctx.ndgain, false);
     const colV = gainColor(ctx.vulnerability, true);
     const colR = gainColor(ctx.readiness, false);
-    const mkCell = (label, value, color, sub) => {
+    const mkCell = (label, value, color, sub, isNdgain) => {
       const c = el("div");
       c.appendChild(el("div", {class:"kpi-l"}, label));
       const val = el("div", {class:"kpi-v", style:`color:${color}`});
       val.appendChild(document.createTextNode(value));
-      if (label === "ND-GAIN score") {
+      if (isNdgain) {
         val.appendChild(el("span", {style:"font-size:0.7rem;color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:500;"}, " /100"));
       }
       c.appendChild(val);
       if (sub) c.appendChild(el("div", {class:"card-sub", style:"margin-top:4px;"}, sub));
       return c;
     };
-    grid.appendChild(mkCell("ND-GAIN score", score, colS));
-    grid.appendChild(mkCell("Vulnerability", vuln, colV, "lower is better"));
-    grid.appendChild(mkCell("Readiness", rdy, colR, "higher is better"));
+    grid.appendChild(mkCell(t("context_ndgain"), score, colS, null, true));
+    grid.appendChild(mkCell(t("context_vulnerability"), vuln, colV, t("context_lower_better"), false));
+    grid.appendChild(mkCell(t("context_readiness"), rdy, colR, t("context_higher_better"), false));
     grid.appendChild(el("div"));
     card.appendChild(grid);
     tab.appendChild(card);
@@ -557,10 +938,28 @@
     return f < 35 ? "#d8607a" : f < 55 ? "var(--amber)" : "#8bbc3a";
   }
 
+  // Methodology panel content is now driven by LOCALES so it switches
+  // alongside the rest of the dashboard. Static HTML stripped from
+  // index.html.
+  function renderMethodology(_payload) {
+    const tab = document.getElementById("tab-methodology");
+    tab.innerHTML = "";
+    const card = el("div", {class:"card"});
+    card.appendChild(el("div", {class:"card-title"}, t("methodology_title")));
+    const ul = el("ul", {class:"meth"});
+    (t("methodology_items") || []).forEach(([key, body]) => {
+      const li = el("li");
+      li.appendChild(el("strong", {}, key));
+      li.appendChild(document.createTextNode(" " + body));
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+    tab.appendChild(card);
+  }
+
   function renderFooter(payload) {
     const ftr = document.getElementById("ftr-text");
-    ftr.textContent =
-      "Created by Portia, your personal climate analyst · " + payload.gen_date;
+    ftr.textContent = t("footer_text") + " · " + payload.gen_date;
   }
 
   // Theme toggle — initial value is applied by an inline script in
@@ -580,6 +979,16 @@
     });
   }
 
+  // Language switcher — initial value matches the lang attribute the
+  // inline script in index.html set before first paint. Subsequent
+  // changes call setLang() which re-renders.
+  function initLangSwitcher() {
+    const sel = document.getElementById("lang-switcher");
+    if (!sel) return;
+    sel.value = currentLang;
+    sel.addEventListener("change", () => setLang(sel.value));
+  }
+
   // Fades out the inline-CSS loading screen from index.html and then
   // removes the node so it's no longer focusable. Safe to call multiple
   // times and safe even if #loading has already been removed.
@@ -592,27 +1001,38 @@
     }, 300);
   }
 
+  // Run the full render pipeline. Called once on initial load, and again
+  // by setLang() when the user switches language — every renderX function
+  // clears its target container first so re-rendering is idempotent.
+  function renderAll(payload) {
+    buildNav(payload);
+    renderTopbar(payload);
+    renderSummary(payload);
+    renderBranches(payload);
+    renderWater(payload);
+    renderTrajectory(payload);
+    renderSite(payload);
+    renderContext(payload);
+    renderMethodology(payload);
+    renderFooter(payload);
+  }
+
   // ── Main ────────────────────────────────────────────────────────────
   async function main() {
+    currentLang = detectInitialLang();
+    document.documentElement.setAttribute("lang", currentLang);
     try {
-      const payload = await getPayload();
-      buildNav(payload);
-      renderTopbar(payload);
-      renderSummary(payload);
-      renderBranches(payload);
-      renderWater(payload);
-      renderTrajectory(payload);
-      renderSite(payload);
-      renderContext(payload);
-      renderFooter(payload);
+      cachedPayload = await getPayload();
+      renderAll(cachedPayload);
       initThemeToggle();
+      initLangSwitcher();
       document.getElementById("app").hidden = false;
     } catch (e) {
       const err = document.getElementById("error");
       err.hidden = false;
       err.innerHTML = `
-        <h2>⚠ Could not render dashboard</h2>
-        <p>The dashboard payload couldn't be parsed.</p>
+        <h2>⚠ ${t("error_title")}</h2>
+        <p>${t("error_body")}</p>
         <pre>${(e && e.message) || String(e)}</pre>
       `;
       console.error(e);
