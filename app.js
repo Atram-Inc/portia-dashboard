@@ -11,34 +11,40 @@
  *     country_display: "Colombia",   // pretty country phrase
  *     gen_date: "May 23, 2026",
  *     source_note: "Source: ..." | null,
+ *     score_max: 10,                 // all scores are on a 0–score_max scale
  *     kpi: {
  *       total: 190, high: 96, medium: 94, low: 0,
- *       avg: 20.2,
+ *       avg: 5.8,                      // 0–10
  *       top_hazard_code: "LS",         // hazard code, stable across langs
  *       top_hazard_label: "Landslide"  // English fallback if no code
  *     },
  *     tier: { label: "High", color: "#96253a" },  // canonical English
  *     hazards: [
- *       { code:"EQ", name:"Earthquake", value: 3.0 },
+ *       { code:"EQ", name:"Earthquake", value: 3.0 },  // 0–4 hazard means
  *       ...
  *     ],
- *     worst: { name, city, score, tier } | null,
+ *     worst: { name, city, score, tier } | null,   // score 0–10
  *     best:  { name, city, score, tier } | null,
  *     branches: [
- *       { name, city, state, match_type, score, tier, h:[0-4]*8 },
+ *       // score 0–10; settlement "U"|"P"|"R" (urban/peri-urban/rural);
+ *       // lat/lon present only when the branch was geocoded.
+ *       { name, city, state, match_type, score, tier, settlement, h:[0-4]*8, lat?, lon? },
  *       ...
  *     ],
  *     branches_note: "Showing 75 of 190..." | null,
+ *     regions: [                     // per-state aggregation, worst-first
+ *       { name, count, avg_score, tier, high, medium, low },
+ *       ...
+ *     ],
  *     coverage: {                    // optional; absent on older payloads
  *       uploaded: 190, matched: 165, unmatched: 25
  *     } | null,
- *     score_dimensions: null,        // reserved for future multi-dim
- *                                    // methodology (e.g. acute / chronic /
- *                                    // trajectory). Null in v1.
- *     water: { country, water_stress: {v, label}, drought: {v, label}, region } | null,
+ *     score_dimensions: null,        // reserved for future multi-dim methodology
+ *     // The fields below are still emitted for ad-hoc LLM queries but the
+ *     // dashboard no longer renders Water / Site / Country-context panels.
+ *     // Climate Trajectory IS still shown.
  *     trajectory: { country, base_tas, fut_tas, d_tas, d_pr } | null,
- *     site: [ { name, city, t2m, t2m_max, t2m_min, precip, wind } ] | null,
- *     context: { country, ndgain, vulnerability, readiness } | null
+ *     water: {...} | null, site: [...] | null, context: {...} | null  // not rendered
  *   }
  *
  * String fields in the payload (tier.label, hazards[i].name, kpi.top_hazard_label,
@@ -226,18 +232,37 @@
       methodology_sources: [
         {source: "GFDRR ThinkHazard v2", purpose: "Hazard screening — 8 hazards each scored 0–4", resolution: "ADM2 (province / department / county)", vintage: "2017", license: "CC BY 4.0"},
         {source: "GeoNames cities500", purpose: "Branch geocoding", resolution: "City centroid", vintage: "Continuously updated", license: "CC BY 4.0"},
-        {source: "WRI Aqueduct 4.0", purpose: "Water stress + drought (Water Risk tab)", resolution: "Country aggregate", vintage: "2023", license: "CC BY 4.0"},
+        {source: "WRI Aqueduct 4.0", purpose: "Water stress + drought (country baseline; available to the analyst on request)", resolution: "Country aggregate", vintage: "2023", license: "CC BY 4.0"},
         {source: "World Bank CCKP", purpose: "Climate projection to 2050 (Climate Trajectory tab)", resolution: "Country, CMIP6 SSP2-4.5 ensemble", vintage: "2024", license: "CC BY 4.0"},
-        {source: "NASA POWER", purpose: "30-year climatology at branch coordinates (Site Climate tab)", resolution: "~0.5° grid (~55 km)", vintage: "30-year window", license: "Public domain"},
-        {source: "ND-GAIN Country Index", purpose: "Country vulnerability + adaptation readiness (Country Context tab)", resolution: "Country", vintage: "Annual", license: "CC BY-SA 4.0"},
+        {source: "NASA POWER", purpose: "30-year climatology at branch coordinates (available to the analyst on request)", resolution: "~0.5° grid (~55 km)", vintage: "30-year window", license: "Public domain"},
+        {source: "ND-GAIN Country Index", purpose: "Country vulnerability + adaptation readiness (available to the analyst on request)", resolution: "Country", vintage: "Annual", license: "CC BY-SA 4.0"},
       ],
       methodology_score_title: "Composite risk score",
-      methodology_score_body: "Per-branch score = sum of reported hazard levels × (8 / number of hazards with data). Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds: High ≥ 20, Medium 12–19, Low < 12.",
+      methodology_score_body: "Per-branch score is normalised to 0–10: Score = (WeightedAverage − 1) / 3 × 10, where WeightedAverage is the mean of the reported hazard levels (1–4) multiplied by a settlement factor (Rural ×1.25, Peri-urban ×1.10, Urban ×1.00 — smaller settlements carry higher climate risk: lower adaptive capacity and fewer financial buffers). Settlement type is inferred from city population (GeoNames); unknown defaults to Peri-urban. Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds: High ≥ 6.7, Medium 3.4–6.7, Low < 3.4.",
       methodology_limitations_title: "Limitations",
       methodology_limitations_body: "ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure. Water risk, climate trajectory, and country context are country-level; branch-level conditions can differ substantially. Sub-national alternatives are on the roadmap.",
 
       // Footer
       footer_text: "Created by Portia, your personal climate analyst",
+
+      // ── Light PCRA upgrade additions ──
+      nav_regions: "Region Scores",
+      nav_map: "Risk Map",
+      sidebar_toggle: "Show / hide sidebar",
+      export_excel: "Export to Excel",
+      export_failed: "Sorry — the Excel export failed. Please try again.",
+      table_col_settlement: "Settlement",
+      filter_settlement: "Settlement",
+      settlement_U: "Urban",
+      settlement_P: "Peri-urban",
+      settlement_R: "Rural",
+      regions_title: "Region risk scores",
+      regions_intro: "Average composite score (0–10) of the matched branches in each region. Click a column to sort.",
+      regions_col_region: "Region",
+      regions_col_branches: "Branches",
+      map_title: "🗺 Branch risk map",
+      map_intro: "Geocoded branches plotted by location, coloured by tier and sized by score.",
+      map_note: (shown, total) => `Showing ${shown} of ${total} branches with coordinates.`,
     },
     es: {
       // Page chrome
@@ -403,18 +428,37 @@
       methodology_sources: [
         {source: "GFDRR ThinkHazard v2", purpose: "Detección de amenazas — 8 amenazas cada una 0–4", resolution: "ADM2 (provincia / departamento / condado)", vintage: "2017", license: "CC BY 4.0"},
         {source: "GeoNames cities500", purpose: "Geocodificación de sucursales", resolution: "Centroide de ciudad", vintage: "Actualización continua", license: "CC BY 4.0"},
-        {source: "WRI Aqueduct 4.0", purpose: "Estrés hídrico + sequía (pestaña Riesgo hídrico)", resolution: "Agregado nacional", vintage: "2023", license: "CC BY 4.0"},
+        {source: "WRI Aqueduct 4.0", purpose: "Estrés hídrico + sequía (línea base nacional; disponible para el analista a solicitud)", resolution: "Agregado nacional", vintage: "2023", license: "CC BY 4.0"},
         {source: "World Bank CCKP", purpose: "Proyección climática a 2050 (pestaña Trayectoria climática)", resolution: "Nacional, ensamble CMIP6 SSP2-4.5", vintage: "2024", license: "CC BY 4.0"},
-        {source: "NASA POWER", purpose: "Climatología de 30 años en coordenadas de sucursal (pestaña Clima del sitio)", resolution: "Cuadrícula ~0.5° (~55 km)", vintage: "Ventana de 30 años", license: "Dominio público"},
-        {source: "Índice de País ND-GAIN", purpose: "Vulnerabilidad + preparación de adaptación nacional (pestaña Contexto del país)", resolution: "Nacional", vintage: "Anual", license: "CC BY-SA 4.0"},
+        {source: "NASA POWER", purpose: "Climatología de 30 años en coordenadas de sucursal (disponible para el analista a solicitud)", resolution: "Cuadrícula ~0.5° (~55 km)", vintage: "Ventana de 30 años", license: "Dominio público"},
+        {source: "Índice de País ND-GAIN", purpose: "Vulnerabilidad + preparación de adaptación nacional (disponible para el analista a solicitud)", resolution: "Nacional", vintage: "Anual", license: "CC BY-SA 4.0"},
       ],
       methodology_score_title: "Puntaje compuesto de riesgo",
-      methodology_score_body: "Puntaje por sucursal = suma de los niveles de amenaza reportados × (8 / número de amenazas con datos). Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs agregados. Umbrales: Alto ≥ 20, Medio 12–19, Bajo < 12.",
+      methodology_score_body: "El puntaje por sucursal se normaliza a 0–10: Puntaje = (PromedioPonderado − 1) / 3 × 10, donde PromedioPonderado es la media de los niveles de amenaza reportados (1–4) multiplicada por un factor de asentamiento (Rural ×1.25, Periurbano ×1.10, Urbano ×1.00 — los asentamientos más pequeños tienen mayor riesgo climático: menor capacidad de adaptación y menos colchones financieros). El tipo de asentamiento se infiere de la población de la ciudad (GeoNames); si se desconoce, se asume Periurbano. Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs. Umbrales: Alto ≥ 6.7, Medio 3.4–6.7, Bajo < 3.4.",
       methodology_limitations_title: "Limitaciones",
       methodology_limitations_body: "La metodología ThinkHazard v2 es de 2017; la granularidad ADM2 puede ser más gruesa que la exposición real de una sucursal. Riesgo hídrico, trayectoria climática y contexto nacional son a nivel país; las condiciones a nivel de sucursal pueden diferir sustancialmente. Hay alternativas sub-nacionales en la hoja de ruta.",
 
       // Footer
       footer_text: "Creado por Portia, tu analista climático personal",
+
+      // ── Light PCRA upgrade additions ──
+      nav_regions: "Puntajes por región",
+      nav_map: "Mapa de riesgo",
+      sidebar_toggle: "Mostrar / ocultar barra lateral",
+      export_excel: "Exportar a Excel",
+      export_failed: "Lo sentimos — la exportación a Excel falló. Inténtalo de nuevo.",
+      table_col_settlement: "Asentamiento",
+      filter_settlement: "Asentamiento",
+      settlement_U: "Urbano",
+      settlement_P: "Periurbano",
+      settlement_R: "Rural",
+      regions_title: "Puntajes de riesgo por región",
+      regions_intro: "Puntaje compuesto promedio (0–10) de las sucursales con coincidencia en cada región. Haz clic en una columna para ordenar.",
+      regions_col_region: "Región",
+      regions_col_branches: "Sucursales",
+      map_title: "🗺 Mapa de riesgo de sucursales",
+      map_intro: "Sucursales geocodificadas ubicadas por coordenadas, coloreadas por nivel y dimensionadas por puntaje.",
+      map_note: (shown, total) => `Mostrando ${shown} de ${total} sucursales con coordenadas.`,
     },
   };
 
@@ -435,10 +479,9 @@
   const NAV_DEFS = [
     {slug:"summary",     key:"nav_summary"},
     {slug:"branches",    key:"nav_branches"},
-    {slug:"water",       key:"nav_water"},
+    {slug:"regions",     key:"nav_regions"},
+    {slug:"map",         key:"nav_map"},
     {slug:"trajectory",  key:"nav_trajectory"},
-    {slug:"site",        key:"nav_site"},
-    {slug:"context",     key:"nav_context"},
     {slug:"methodology", key:"nav_methodology"},
   ];
 
@@ -651,6 +694,25 @@
     if (/fuzzy/i.test(mt)) return t("match_fuzzy");
     return t("match_not_found");
   }
+  // Settlement code (U/P/R) → localized label. Unknown codes show "—".
+  function settlementLabel(code) {
+    if (!code) return "—";
+    return t("settlement_" + code) || "—";
+  }
+  function settlementClass(code) {
+    return {U:"s-u", P:"s-p", R:"s-r"}[code] || "s-x";
+  }
+  // Score column header carries the explicit 0–max range, e.g. "Score (0–10)".
+  function scoreColLabel(payload) {
+    const max = (payload && payload.score_max) || 10;
+    return t("table_col_score") + " (0–" + max + ")";
+  }
+  // Format a score with its scale suffix, e.g. "5.8 / 10".
+  function scoreWithMax(score, payload) {
+    const max = (payload && payload.score_max) || 10;
+    if (score == null || isNaN(score)) return "—";
+    return score + " / " + max;
+  }
 
   // ── Tab navigation ──────────────────────────────────────────────────
   function setActive(slug) {
@@ -666,10 +728,9 @@
     nav.appendChild(el("div", {class:"nav-section"}, t("sidebar_section")));
     const visible = NAV_DEFS.filter(d => {
       if (d.slug === "summary" || d.slug === "branches" || d.slug === "methodology") return true;
-      if (d.slug === "water") return !!payload.water;
+      if (d.slug === "regions") return !!(payload.regions && payload.regions.length);
+      if (d.slug === "map") return (payload.branches || []).some(b => b.lat != null && b.lon != null);
       if (d.slug === "trajectory") return !!payload.trajectory;
-      if (d.slug === "site") return !!(payload.site && payload.site.length);
-      if (d.slug === "context") return !!payload.context;
       return false;
     });
     visible.forEach((d, i) => {
@@ -779,7 +840,7 @@
       {label: t("kpi_high"),        value: String(payload.kpi.high),   color: "#d8607a"},
       {label: t("kpi_medium"),      value: String(payload.kpi.medium), color: "var(--amber)"},
       {label: t("kpi_low"),         value: String(payload.kpi.low),    color: "#8bbc3a"},
-      {label: t("kpi_avg"),         value: String(payload.kpi.avg),    color: "var(--yellow)"},
+      {label: t("kpi_avg"),         value: scoreWithMax(payload.kpi.avg, payload), color: "var(--yellow)"},
       {label: t("kpi_top_hazard"),  value: topHazardDisplay,           color: "var(--cream)"},
     ];
     cards.forEach(card => {
@@ -826,7 +887,8 @@
     c.appendChild(el("div", {class:"card-title"}, title));
     c.appendChild(el("div", {class:"card-big"}, b.name));
     const sub = el("div", {class:"card-sub"});
-    sub.appendChild(document.createTextNode(`${b.city} · ${t("score_word")} ${b.score} · `));
+    sub.appendChild(document.createTextNode(
+      `${b.city} · ${t("score_word")} ${scoreWithMax(b.score, cachedPayload)} · `));
     sub.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, tierLabel(b.tier)));
     c.appendChild(sub);
     return c;
@@ -843,9 +905,12 @@
     region: "",
     tier: "",
     match: "",
+    settlement: "",
     sortKey: null,
     sortDir: 1,
   };
+  // Sort weight for the settlement column — rural (higher risk) sorts highest.
+  const SETTLEMENT_ORDER = {R:3, P:2, U:1};
 
   // Bucket the raw match_type into a canonical key for filtering. The key
   // is language-independent ("exact" / "fuzzy" / "region" / "not_found"); the
@@ -867,12 +932,13 @@
       value: (b) => (b.h && typeof b.h[i] === "number") ? b.h[i] : -1,
     }));
     const colDefs = [
-      {label:t("table_col_branch"), align:"left",   value:(b)=>(b.name||"").toLowerCase()},
-      {label:t("table_col_city"),   align:"left",   value:(b)=>(b.city||"").toLowerCase()},
-      {label:t("table_col_region"), align:"left",   value:(b)=>(b.state||"").toLowerCase()},
-      {label:t("table_col_match"),  align:"center", value:(b)=>matchBucket(b.match_type)},
-      {label:t("table_col_score"),  align:"center", value:(b)=>(b.score==null ? -1 : Number(b.score))},
-      {label:t("table_col_tier"),   align:"center", value:(b)=>(TIER_ORDER[b.tier] || 0)},
+      {label:t("table_col_branch"),     align:"left",   value:(b)=>(b.name||"").toLowerCase()},
+      {label:t("table_col_city"),       align:"left",   value:(b)=>(b.city||"").toLowerCase()},
+      {label:t("table_col_region"),     align:"left",   value:(b)=>(b.state||"").toLowerCase()},
+      {label:t("table_col_settlement"), align:"center", value:(b)=>(SETTLEMENT_ORDER[b.settlement] || 0)},
+      {label:t("table_col_match"),      align:"center", value:(b)=>matchBucket(b.match_type)},
+      {label:scoreColLabel(payload),    align:"center", value:(b)=>(b.score==null ? -1 : Number(b.score))},
+      {label:t("table_col_tier"),       align:"center", value:(b)=>(TIER_ORDER[b.tier] || 0)},
     ].concat(hazardCols);
 
     const thead = document.getElementById("branch-thead");
@@ -941,11 +1007,22 @@
     host.appendChild(makeSelect(t("filter_match"), matchOpts, branchState.match,
       (v) => { branchState.match = v; applyFilters(); }));
 
+    // Settlement filter (rural / peri-urban / urban), ordered R → P → U.
+    const settlements = Array.from(new Set(
+      payload.branches.map(b => b.settlement).filter(Boolean)
+    )).sort((a, b) => (SETTLEMENT_ORDER[b]||0) - (SETTLEMENT_ORDER[a]||0));
+    const settlementOpts = settlements.map(code => ({value: code, display: settlementLabel(code)}));
+    host.appendChild(makeSelect(t("filter_settlement"), settlementOpts, branchState.settlement,
+      (v) => { branchState.settlement = v; applyFilters(); }));
+
+    // Export the (full) branch + region tables to a real .xlsx workbook.
+    host.appendChild(makeExcelButton(payload));
+
     const reset = el("button", {type:"button", class:"branch-filter-reset"},
                      t("filter_reset"));
     reset.addEventListener("click", () => {
       branchState.text = ""; branchState.region = "";
-      branchState.tier = ""; branchState.match = "";
+      branchState.tier = ""; branchState.match = ""; branchState.settlement = "";
       branchState.sortKey = null; branchState.sortDir = 1;
       host.querySelectorAll("input,select").forEach(node => {
         node.value = "";
@@ -987,6 +1064,8 @@
     if (region) out = out.filter(b => (b.state||"") === region);
     if (tier)   out = out.filter(b => (b.tier||"") === tier);
     if (match)  out = out.filter(b => matchBucket(b.match_type) === match);
+    if (branchState.settlement)
+      out = out.filter(b => (b.settlement||"") === branchState.settlement);
 
     if (sortKey != null && colDefs[sortKey]) {
       const col = colDefs[sortKey];
@@ -1023,6 +1102,12 @@
     tr.appendChild(el("td", {class:"bname"}, b.name));
     tr.appendChild(el("td", {}, b.city || ""));
     tr.appendChild(el("td", {}, b.state || ""));
+    const setlTd = el("td", {class:"ccenter"});
+    setlTd.appendChild(el("span", {
+      class:"pill " + settlementClass(b.settlement),
+      title: settlementLabel(b.settlement),
+    }, b.settlement || "—"));
+    tr.appendChild(setlTd);
     const matchTd = el("td", {class:"ccenter"});
     matchTd.appendChild(el("span", {class:"pill " + matchClass(b.match_type)},
                               matchLabel(b.match_type)));
@@ -1035,42 +1120,6 @@
       tr.appendChild(el("td", {class:"h h" + v}, levelLabel(v)));
     });
     return tr;
-  }
-
-  function renderWater(payload) {
-    const tab = document.getElementById("tab-water");
-    tab.innerHTML = "";
-    if (!payload.water) return;
-    const w = payload.water;
-    const card = el("div", {class:"card mb16"});
-    card.appendChild(titleWithInfo(t("water_title", w.country), "water"));
-    card.appendChild(el("div", {class:"card-sub mb12"}, t("water_source")));
-    const grid = el("div", {class:"grid-2"});
-    grid.appendChild(stressBlock(t("water_stress"), w.water_stress));
-    grid.appendChild(stressBlock(t("water_drought"), w.drought));
-    card.appendChild(grid);
-    if (w.region) {
-      card.appendChild(el("div", {class:"card-sub", style:"margin-top:10px;"},
-        t("water_region", w.region)));
-    }
-    tab.appendChild(card);
-  }
-  function stressColor(v) {
-    if (v == null || isNaN(v)) return "var(--stone)";
-    if (v >= 3) return "#d8607a";
-    if (v >= 2) return "var(--amber)";
-    if (v >= 1) return "var(--yellow)";
-    return "#8bbc3a";
-  }
-  function stressBlock(title, {v, label}) {
-    const d = el("div");
-    d.appendChild(el("div", {class:"kpi-l"}, title));
-    const val = el("div", {class:"kpi-v", style:`color:${stressColor(v)}`});
-    val.appendChild(document.createTextNode(v == null ? "—" : Number(v).toFixed(2)));
-    val.appendChild(el("span", {style:"font-size:0.7rem;color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:500;"}, " /5"));
-    d.appendChild(val);
-    if (label) d.appendChild(el("div", {class:"card-sub", style:"margin-top:4px;"}, label));
-    return d;
   }
 
   function renderTrajectory(payload) {
@@ -1100,82 +1149,177 @@
     tab.appendChild(card);
   }
 
-  function renderSite(payload) {
-    const tab = document.getElementById("tab-site");
+  // ── Region score table ──────────────────────────────────────────────
+  // Aggregated per-state rows from payload.regions (count / avg 0–10 / tier /
+  // High-Medium-Low counts). Sortable like the branch table; exports to Excel.
+  const REGION_TIER_ORDER = {High:3, Medium:2, Low:1, Unmatched:0};
+  const regionState = {rows: [], colDefs: [], sortKey: null, sortDir: 1};
+
+  function renderRegions(payload) {
+    const tab = document.getElementById("tab-regions");
     tab.innerHTML = "";
-    if (!payload.site || !payload.site.length) return;
-    tab.appendChild(titleWithInfo(t("site_title"), "site"));
-    tab.appendChild(el("div", {class:"card-sub mb12"}, t("site_source")));
+    const regions = payload.regions || [];
+    if (!regions.length) return;
+
+    const head = el("div", {class:"section-head-row"});
+    head.appendChild(el("div", {class:"card-title"}, t("regions_title")));
+    head.appendChild(makeExcelButton(payload));
+    tab.appendChild(head);
+    tab.appendChild(el("div", {class:"card-sub mb12"}, t("regions_intro")));
+
+    const colDefs = [
+      {label:t("regions_col_region"), align:"left",   value:(r)=>(r.name||"").toLowerCase()},
+      {label:t("regions_col_branches"),align:"center",value:(r)=>r.count||0},
+      {label:scoreColLabel(payload), align:"center",  value:(r)=>(r.avg_score==null?-1:Number(r.avg_score))},
+      {label:t("table_col_tier"),     align:"center", value:(r)=>(REGION_TIER_ORDER[r.tier]||0)},
+      {label:t("tier_High"),          align:"center", value:(r)=>r.high||0},
+      {label:t("tier_Medium"),        align:"center", value:(r)=>r.medium||0},
+      {label:t("tier_Low"),           align:"center", value:(r)=>r.low||0},
+    ];
+    regionState.rows = regions.slice();
+    regionState.colDefs = colDefs;
+
     const wrap = el("div", {class:"tbl-wrap"});
     const table = el("table");
     const thead = el("thead");
-    const trh = el("tr");
-    const headers = [
-      t("site_col_branch"), t("site_col_city"), t("site_col_mean_t"),
-      t("site_col_max_t"), t("site_col_min_t"), t("site_col_precip"),
-      t("site_col_wind"),
-    ];
-    headers.forEach((h, i) => trh.appendChild(el("th", {class: i >= 2 ? "ccenter" : ""}, h)));
+    const trh = el("tr", {id:"region-thead"});
+    colDefs.forEach((col, i) => {
+      const th = el("th", {
+        class:(col.align==="center"?"ccenter ":"")+"sortable",
+        "data-sort-key":String(i),
+      });
+      th.appendChild(document.createTextNode(col.label));
+      th.appendChild(el("span", {class:"sort-ind region-sort-ind", "data-for":String(i)}, ""));
+      th.addEventListener("click", () => {
+        if (regionState.sortKey === i) regionState.sortDir *= -1;
+        else { regionState.sortKey = i; regionState.sortDir = 1; }
+        applyRegionSort();
+      });
+      trh.appendChild(th);
+    });
     thead.appendChild(trh);
     table.appendChild(thead);
-    const tbody = el("tbody");
-    payload.site.forEach(s => {
-      const row = el("tr");
-      row.appendChild(el("td", {}, s.name));
-      row.appendChild(el("td", {}, s.city || ""));
-      row.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m)));
-      row.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m_max)));
-      row.appendChild(el("td", {class:"ccenter"}, fmt(s.t2m_min)));
-      row.appendChild(el("td", {class:"ccenter"}, fmt(s.precip)));
-      row.appendChild(el("td", {class:"ccenter"}, fmt(s.wind)));
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
+    table.appendChild(el("tbody", {id:"region-tbody"}));
     wrap.appendChild(table);
     tab.appendChild(wrap);
+    applyRegionSort();
   }
 
-  function renderContext(payload) {
-    const tab = document.getElementById("tab-context");
-    tab.innerHTML = "";
-    if (!payload.context) return;
-    const ctx = payload.context;
-    const card = el("div", {class:"card mb16"});
-    card.appendChild(titleWithInfo(t("context_title", ctx.country), "context"));
-    card.appendChild(el("div", {class:"card-sub mb12"}, t("context_source")));
-    const grid = el("div", {class:"grid-4"});
-    const score = ctx.ndgain != null ? Number(ctx.ndgain).toFixed(1) : "—";
-    const vuln = ctx.vulnerability != null ? Number(ctx.vulnerability).toFixed(2) : "—";
-    const rdy = ctx.readiness != null ? Number(ctx.readiness).toFixed(2) : "—";
-    const colS = gainColor(ctx.ndgain, false);
-    const colV = gainColor(ctx.vulnerability, true);
-    const colR = gainColor(ctx.readiness, false);
-    const mkCell = (label, value, color, sub, isNdgain) => {
-      const c = el("div");
-      c.appendChild(el("div", {class:"kpi-l"}, label));
-      const val = el("div", {class:"kpi-v", style:`color:${color}`});
-      val.appendChild(document.createTextNode(value));
-      if (isNdgain) {
-        val.appendChild(el("span", {style:"font-size:0.7rem;color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:500;"}, " /100"));
-      }
-      c.appendChild(val);
-      if (sub) c.appendChild(el("div", {class:"card-sub", style:"margin-top:4px;"}, sub));
-      return c;
-    };
-    grid.appendChild(mkCell(t("context_ndgain"), score, colS, null, true));
-    grid.appendChild(mkCell(t("context_vulnerability"), vuln, colV, t("context_lower_better"), false));
-    grid.appendChild(mkCell(t("context_readiness"), rdy, colR, t("context_higher_better"), false));
-    grid.appendChild(el("div"));
-    card.appendChild(grid);
-    tab.appendChild(card);
+  function applyRegionSort() {
+    const {rows, colDefs, sortKey, sortDir} = regionState;
+    let out = rows;
+    if (sortKey != null && colDefs[sortKey]) {
+      const col = colDefs[sortKey];
+      out = rows.slice().sort((a, b) => {
+        const va = col.value(a), vb = col.value(b);
+        if (va === vb) return 0;
+        if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+        return (va < vb ? -1 : 1) * sortDir;
+      });
+    }
+    document.querySelectorAll(".region-sort-ind").forEach(node => {
+      const k = Number(node.getAttribute("data-for"));
+      node.textContent = (sortKey === k) ? (sortDir > 0 ? " ▲" : " ▼") : "";
+    });
+    const tbody = document.getElementById("region-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    out.forEach(r => {
+      const tr = el("tr");
+      tr.appendChild(el("td", {class:"bname"}, r.name));
+      tr.appendChild(el("td", {class:"ccenter"}, String(r.count)));
+      tr.appendChild(el("td", {class:"ccenter score"}, r.avg_score == null ? "—" : String(r.avg_score)));
+      const tierTd = el("td", {class:"ccenter"});
+      tierTd.appendChild(el("span", {class:"tp " + tierClass(r.tier)}, tierLabel(r.tier)));
+      tr.appendChild(tierTd);
+      tr.appendChild(el("td", {class:"ccenter"}, String(r.high)));
+      tr.appendChild(el("td", {class:"ccenter"}, String(r.medium)));
+      tr.appendChild(el("td", {class:"ccenter"}, String(r.low)));
+      tbody.appendChild(tr);
+    });
   }
-  function gainColor(v, inverse) {
-    if (v == null || isNaN(v)) return "var(--stone)";
-    let f = Number(v);
-    if (f >= 0 && f <= 1) f *= 100;
-    if (inverse)
-      return f < 35 ? "#8bbc3a" : f < 55 ? "var(--amber)" : "#d8607a";
-    return f < 35 ? "#d8607a" : f < 55 ? "var(--amber)" : "#8bbc3a";
+
+  // ── Risk map ─────────────────────────────────────────────────────────
+  // Dependency-free SVG scatter of geocoded branches on an equirectangular
+  // projection, coloured by tier and sized by score. No tiles / no external
+  // library (per repo policy) — it shows the geographic spread of risk.
+  function renderMap(payload) {
+    const tab = document.getElementById("tab-map");
+    tab.innerHTML = "";
+    const pts = (payload.branches || []).filter(b => b.lat != null && b.lon != null);
+    if (!pts.length) return;
+
+    const card = el("div", {class:"card"});
+    card.appendChild(el("div", {class:"card-title"}, t("map_title")));
+    card.appendChild(el("div", {class:"card-sub mb12"}, t("map_intro")));
+
+    const W = 760, H = 460, PAD = 28;
+    let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+    pts.forEach(p => {
+      minLat = Math.min(minLat, p.lat); maxLat = Math.max(maxLat, p.lat);
+      minLon = Math.min(minLon, p.lon); maxLon = Math.max(maxLon, p.lon);
+    });
+    // Guard against a single point / zero span.
+    let latSpan = maxLat - minLat || 1, lonSpan = maxLon - minLon || 1;
+    minLat -= latSpan * 0.08; maxLat += latSpan * 0.08;
+    minLon -= lonSpan * 0.08; maxLon += lonSpan * 0.08;
+    latSpan = maxLat - minLat; lonSpan = maxLon - minLon;
+    // Keep aspect ratio roughly correct (latitude degrees ~constant; longitude
+    // degrees shrink with cos(lat)). Apply a simple cos correction.
+    const cosLat = Math.cos((minLat + maxLat) / 2 * Math.PI / 180) || 1;
+    const dataW = lonSpan * cosLat, dataH = latSpan;
+    const scale = Math.min((W - 2 * PAD) / dataW, (H - 2 * PAD) / dataH);
+    const offX = (W - dataW * scale) / 2, offY = (H - dataH * scale) / 2;
+    const projX = (lon) => offX + (lon - minLon) * cosLat * scale;
+    const projY = (lat) => offY + (maxLat - lat) * scale;
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("class", "risk-map");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", t("map_title"));
+    const bg = document.createElementNS(svgNS, "rect");
+    bg.setAttribute("x", 0); bg.setAttribute("y", 0);
+    bg.setAttribute("width", W); bg.setAttribute("height", H);
+    bg.setAttribute("class", "risk-map-bg");
+    svg.appendChild(bg);
+
+    const tierColorVar = {
+      High: "var(--rust-bright)", Medium: "var(--amber)",
+      Low: "var(--moss-bright)", Unmatched: "var(--stone)",
+    };
+    // Draw worst on top: sort ascending so High circles paint last.
+    pts.slice().sort((a, b) => (a.score || 0) - (b.score || 0)).forEach(p => {
+      const c = document.createElementNS(svgNS, "circle");
+      c.setAttribute("cx", projX(p.lon).toFixed(1));
+      c.setAttribute("cy", projY(p.lat).toFixed(1));
+      const sc = p.score == null ? 0 : p.score;
+      c.setAttribute("r", (4 + sc / 10 * 6).toFixed(1));
+      c.setAttribute("fill", tierColorVar[p.tier] || "var(--stone)");
+      c.setAttribute("class", "risk-map-pt");
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = `${p.name}${p.city ? " · " + p.city : ""} · ${t("score_word")} ${sc} · ${tierLabel(p.tier)}`;
+      c.appendChild(title);
+      svg.appendChild(c);
+    });
+    const mapWrap = el("div", {class:"risk-map-wrap"});
+    mapWrap.appendChild(svg);
+    card.appendChild(mapWrap);
+
+    // Legend
+    const legend = el("div", {class:"map-legend"});
+    [["High", t("tier_High")], ["Medium", t("tier_Medium")],
+     ["Low", t("tier_Low")]].forEach(([canon, label]) => {
+      const item = el("span", {class:"map-legend-item"});
+      item.appendChild(el("span", {class:"map-legend-dot", style:`background:${tierColorVar[canon]}`}));
+      item.appendChild(document.createTextNode(label));
+      legend.appendChild(item);
+    });
+    card.appendChild(legend);
+    card.appendChild(el("div", {class:"card-sub", style:"margin-top:8px;"},
+      t("map_note", pts.length, (payload.branches || []).length)));
+    tab.appendChild(card);
   }
 
   // Methodology panel: structured table of all data sources + score formula
@@ -1227,6 +1371,200 @@
     ftr.textContent = t("footer_text") + " · " + payload.gen_date;
   }
 
+  // ── Excel export (dependency-free .xlsx writer) ──────────────────────
+  // Builds a minimal OOXML workbook (one sheet per table, inline strings) and
+  // packs it into a ZIP with STORED (uncompressed) entries + CRC32. No
+  // external library — this repo ships only plain files (see CLAUDE.md).
+  const CRC_TABLE = (function () {
+    const tbl = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      tbl[n] = c >>> 0;
+    }
+    return tbl;
+  })();
+  function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function strBytes(s) { return new TextEncoder().encode(s); }
+  function xmlEscape(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  }
+  function u16(n) { return new Uint8Array([n & 255, (n >> 8) & 255]); }
+  function u32(n) { return new Uint8Array([n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255]); }
+  function concatBytes(arr) {
+    let len = 0; arr.forEach(a => len += a.length);
+    const out = new Uint8Array(len);
+    let o = 0;
+    arr.forEach(a => { out.set(a, o); o += a.length; });
+    return out;
+  }
+  function colLetter(n) {            // 0-based column index → A, B, … AA, …
+    let s = ""; n++;
+    while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+  function sheetName(name) {          // Excel: ≤31 chars, none of []:*?/\
+    return String(name).replace(/[\[\]:*?/\\]/g, " ").slice(0, 31) || "Sheet";
+  }
+  function sheetXml(rows) {
+    let body = "";
+    rows.forEach((row, r) => {
+      let cells = "";
+      row.forEach((val, c) => {
+        const ref = colLetter(c) + (r + 1);
+        if (typeof val === "number" && isFinite(val)) {
+          cells += `<c r="${ref}"><v>${val}</v></c>`;
+        } else {
+          cells += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(val == null ? "" : val)}</t></is></c>`;
+        }
+      });
+      body += `<row r="${r + 1}">${cells}</row>`;
+    });
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`;
+  }
+  function buildXlsxBlob(sheets) {
+    const n = sheets.length;
+    let overrides = "";
+    for (let i = 1; i <= n; i++) overrides += `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`;
+    let sheetTags = "", wbRels = "";
+    sheets.forEach((sh, i) => {
+      sheetTags += `<sheet name="${xmlEscape(sheetName(sh.name))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`;
+      wbRels += `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`;
+    });
+    const files = [
+      {name: "[Content_Types].xml", data: strBytes(
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+        `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+        `<Default Extension="xml" ContentType="application/xml"/>` +
+        `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
+        overrides + `</Types>`)},
+      {name: "_rels/.rels", data: strBytes(
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+        `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>` +
+        `</Relationships>`)},
+      {name: "xl/workbook.xml", data: strBytes(
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+        `<sheets>${sheetTags}</sheets></workbook>`)},
+      {name: "xl/_rels/workbook.xml.rels", data: strBytes(
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${wbRels}</Relationships>`)},
+    ];
+    sheets.forEach((s, i) => files.push({name: `xl/worksheets/sheet${i + 1}.xml`, data: strBytes(sheetXml(s.rows))}));
+
+    // ZIP (stored, no compression).
+    const chunks = [], central = [];
+    let offset = 0;
+    files.forEach(f => {
+      const nameB = strBytes(f.name), data = f.data, crc = crc32(data), size = data.length;
+      const lh = concatBytes([
+        u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(crc), u32(size), u32(size), u16(nameB.length), u16(0), nameB,
+      ]);
+      chunks.push(lh, data);
+      central.push(concatBytes([
+        u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(crc), u32(size), u32(size), u16(nameB.length), u16(0), u16(0),
+        u16(0), u16(0), u32(0), u32(offset), nameB,
+      ]));
+      offset += lh.length + data.length;
+    });
+    const centralBytes = concatBytes(central);
+    const eocd = concatBytes([
+      u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+      u32(centralBytes.length), u32(offset), u16(0),
+    ]);
+    chunks.push(centralBytes, eocd);
+    return new Blob(chunks, {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  }
+
+  // Assemble the workbook rows from the payload (Branches + Regions sheets).
+  function buildExportData(payload) {
+    const max = (payload && payload.score_max) || 10;
+    const scoreHdr = t("table_col_score") + " (0-" + max + ")";
+    const haz = (payload.hazards || []).map(h => hazardName(h));
+    const branchHeader = [
+      t("table_col_branch"), t("table_col_city"), t("table_col_region"),
+      t("table_col_settlement"), t("table_col_match"), scoreHdr, t("table_col_tier"),
+    ].concat(haz);
+    const branchRows = (payload.branches || []).map(b => {
+      const row = [
+        b.name || "", b.city || "", b.state || "",
+        settlementLabel(b.settlement), matchLabel(b.match_type),
+        (b.score == null ? "" : Number(b.score)), tierLabel(b.tier),
+      ];
+      (b.h || []).forEach(v => row.push(levelLabel(v)));
+      return row;
+    });
+    const regionHeader = [
+      t("regions_col_region"), t("regions_col_branches"), scoreHdr, t("table_col_tier"),
+      t("tier_High"), t("tier_Medium"), t("tier_Low"),
+    ];
+    const regionRows = (payload.regions || []).map(r => [
+      r.name, r.count, (r.avg_score == null ? "" : Number(r.avg_score)),
+      tierLabel(r.tier), r.high, r.medium, r.low,
+    ]);
+    const sheets = [{name: t("nav_branches"), rows: [branchHeader].concat(branchRows)}];
+    if (regionRows.length) sheets.push({name: t("nav_regions"), rows: [regionHeader].concat(regionRows)});
+    return sheets;
+  }
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = el("a", {href: url, download: filename});
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); if (a.parentNode) a.remove(); }, 1000);
+  }
+  function makeExcelButton(payload) {
+    const btn = el("button", {type: "button", class: "export-btn"});
+    btn.appendChild(el("span", {class: "export-btn-ico", "aria-hidden": "true"}, "⤓"));
+    btn.appendChild(document.createTextNode(t("export_excel")));
+    btn.addEventListener("click", () => {
+      try {
+        const blob = buildXlsxBlob(buildExportData(payload));
+        const safe = (payload.fsp_name || "portia").replace(/[^\w\-]+/g, "_").slice(0, 40);
+        downloadBlob(blob, `Portia_PCRA_${safe}.xlsx`);
+      } catch (e) {
+        console.error("Excel export failed", e);
+        alert(t("export_failed"));
+      }
+    });
+    return btn;
+  }
+
+  // Collapsible left sidebar. Persists in localStorage so the choice sticks
+  // across dashboards. The toggle button lives in the topbar.
+  const SIDEBAR_KEY = "portia.sidebar";
+  function applySidebarState(collapsed) {
+    const app = document.getElementById("app");
+    if (app) app.classList.toggle("sidebar-collapsed", !!collapsed);
+    const btn = document.getElementById("sidebar-toggle");
+    if (btn) btn.setAttribute("aria-expanded", String(!collapsed));
+  }
+  function initSidebarToggle() {
+    const btn = document.getElementById("sidebar-toggle");
+    if (!btn) return;
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(SIDEBAR_KEY) === "1"; } catch (_) {}
+    applySidebarState(collapsed);
+    btn.setAttribute("aria-label", t("sidebar_toggle"));
+    btn.title = t("sidebar_toggle");
+    btn.addEventListener("click", () => {
+      const app = document.getElementById("app");
+      const now = !(app && app.classList.contains("sidebar-collapsed"));
+      applySidebarState(now);
+      try { localStorage.setItem(SIDEBAR_KEY, now ? "1" : "0"); } catch (_) {}
+    });
+  }
+
   // Theme toggle — initial value is applied by an inline script in
   // index.html <head> before first paint, so by the time this runs the
   // attribute is already set correctly. We just wire the click handler
@@ -1274,10 +1612,9 @@
     renderTopbar(payload);
     renderSummary(payload);
     renderBranches(payload);
-    renderWater(payload);
+    renderRegions(payload);
+    renderMap(payload);
     renderTrajectory(payload);
-    renderSite(payload);
-    renderContext(payload);
     renderMethodology(payload);
     renderFooter(payload);
   }
@@ -1291,6 +1628,7 @@
       renderAll(cachedPayload);
       initThemeToggle();
       initLangSwitcher();
+      initSidebarToggle();
       document.getElementById("app").hidden = false;
     } catch (e) {
       const err = document.getElementById("error");
