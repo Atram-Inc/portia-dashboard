@@ -100,7 +100,7 @@ a{color:inherit;text-decoration:none;}
 .nav-ico-context{--u:url('assets/icons/context.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
 .nav-ico-methodology{--u:url('assets/icons/methodology.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
 .nav-ico-trajectory{--u:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMyAxN2w1LTUgNCA0IDctNyAyIDJ2OUgzdi0zeiIvPjwvc3ZnPg==");-webkit-mask-image:var(--u);mask-image:var(--u);}
-.nav-ico-regions{--u:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iYmxhY2siPjxwYXRoIGQ9Ik0zIDRoMTh2NEgzek0zIDExaDE4djRIM3pNMyAxOGgxOHYzSDN6Ii8+PC9zdmc+");-webkit-mask-image:var(--u);mask-image:var(--u);}
+.nav-ico-regions{--u:url('assets/icons/context.png');-webkit-mask-image:var(--u);mask-image:var(--u);}
 .nav-ico-map{--u:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iYmxhY2siPjxwYXRoIGQ9Ik0xMiAyQzggMiA1IDUgNSA5YzAgNSA3IDEzIDcgMTNzNy04IDctMTNjMC00LTMtNy03LTd6bTAgOS41QTIuNSAyLjUgMCAxIDEgMTIgNmEyLjUgMi41IDAgMCAxIDAgNS41eiIvPjwvc3ZnPg==");-webkit-mask-image:var(--u);mask-image:var(--u);}
 
 /* Main -------------------------------------------------------------- */
@@ -228,7 +228,7 @@ a{color:inherit;text-decoration:none;}
 .tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);}
 table{width:100%;border-collapse:collapse;font-size:0.82rem;background:transparent;}
 thead{background:var(--surface-3);color:var(--text);}
-th{padding:10px 12px;text-align:left;font-weight:600;font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);}
+th{padding:10px 16px;text-align:left;font-weight:600;font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);white-space:nowrap;}
 th.sortable{cursor:pointer;user-select:none;transition:color .12s,background .12s;}
 th.sortable:hover{color:var(--cream);background:var(--hover-overlay);}
 th.sortable .sort-ind{display:inline-block;width:14px;color:var(--moss-bright);font-size:0.7rem;}
@@ -302,18 +302,38 @@ select.branch-filter-input{cursor:pointer;}
 /* On the branch filter row the export button aligns with the other controls. */
 .branch-filters .export-btn{align-self:flex-end;height:32px;}
 
-/* Risk map ---------------------------------------------------------- */
-.risk-map-wrap{width:100%;overflow:hidden;border-radius:10px;border:1px solid var(--border);background:var(--surface);}
+/* Risk map (Leaflet) ------------------------------------------------- */
+#risk-map-canvas{height:560px;width:100%;border-radius:10px;border:1px solid var(--border);overflow:hidden;background:var(--surface-2);z-index:0;}
+.leaflet-container{background:var(--surface-2);font:inherit;}
+/* Dark-friendly zoom + attribution controls */
+.leaflet-bar a,.leaflet-bar a:hover{background:var(--surface-2);color:var(--text);border-bottom-color:var(--border);}
+.leaflet-control-attribution{background:rgba(13,11,8,0.6)!important;color:var(--text-dim)!important;}
+.leaflet-control-attribution a{color:var(--text-dim)!important;}
+:root[data-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,0.7)!important;}
+/* Styled hover tooltip — matches the dashboard surface, overriding Leaflet's
+   default white box. */
+.leaflet-tooltip.portia-map-tip{
+  background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border-strong);border-radius:8px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.35);padding:9px 11px;
+  font:inherit;font-size:0.8rem;white-space:nowrap;
+}
+.leaflet-tooltip.portia-map-tip::before{display:none;}
+.portia-map-tip .ptip-title{font-weight:700;color:var(--cream);margin-bottom:5px;font-size:0.86rem;}
+.portia-map-tip .ptip-row{display:flex;justify-content:space-between;gap:18px;line-height:1.5;}
+.portia-map-tip .ptip-row span{color:var(--text-dim);}
+.portia-map-tip .ptip-row b{color:var(--text);font-weight:600;}
+/* SVG scatter fallback (only if Leaflet fails to load) */
+.risk-map-fallback{height:auto;}
 .risk-map{display:block;width:100%;height:auto;}
-.risk-map-bg{fill:var(--surface);}
-.risk-map-pt{stroke:var(--surface);stroke-width:1;opacity:0.85;transition:opacity .12s;cursor:pointer;}
+.risk-map-pt{stroke:var(--surface);stroke-width:1;opacity:0.85;cursor:pointer;}
 .risk-map-pt:hover{opacity:1;stroke:var(--cream);stroke-width:1.5;}
 .map-legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;}
 .map-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-dim);}
 .map-legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
 
 /* Hazard cells ------------------------------------------------------- */
-.h{color:white;text-align:center;font-size:0.74rem;font-weight:500;}
+.h{color:white;text-align:center;font-size:0.74rem;font-weight:500;white-space:nowrap;}
 .h0{background:#5e5c4e;color:#c7c4be;}
 .h1{background:#456120;}
 .h2{background:#fde047;color:#25231f;}
