@@ -1,4 +1,4 @@
-/* Portia dashboard template — Atram brand styling. The shape mirrors
+/* Portia dashboard template - Atram brand styling. The shape mirrors
    what the Python tool used to render server-side; client-side JS in
    app.js populates the dynamic content. */
 
@@ -65,7 +65,7 @@ a{color:inherit;text-decoration:none;}
    default, and a payload-decode failure would render an empty app shell
    alongside the error block. */
 .app:not([hidden]){display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
-/* Collapsible sidebar — toggled from the topbar button (persisted in
+/* Collapsible sidebar - toggled from the topbar button (persisted in
    localStorage). Collapsing drops the grid to a single column and hides the
    aside entirely. */
 .app.sidebar-collapsed:not([hidden]){grid-template-columns:1fr;}
@@ -134,7 +134,9 @@ a{color:inherit;text-decoration:none;}
 :root[data-theme="light"] .theme-switch-side.is-light{color:var(--cream);}
 :root[data-theme="dark"]  .theme-switch-side.is-dark {color:var(--cream);}
 
-.content{padding:24px 32px 64px;flex:1;max-width:1400px;}
+/* Wider cap so the (now full, un-wrapped) branch table fits on large screens
+   without clipping; the table still scrolls horizontally on narrow ones. */
+.content{padding:24px 32px 64px;flex:1;max-width:1760px;width:100%;}
 .panel{display:none;}
 .panel.active{display:block;}
 
@@ -310,7 +312,7 @@ select.branch-filter-input{cursor:pointer;}
 .leaflet-control-attribution{background:rgba(13,11,8,0.6)!important;color:var(--text-dim)!important;}
 .leaflet-control-attribution a{color:var(--text-dim)!important;}
 :root[data-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,0.7)!important;}
-/* Styled hover tooltip — matches the dashboard surface, overriding Leaflet's
+/* Styled hover tooltip - matches the dashboard surface, overriding Leaflet's
    default white box. */
 .leaflet-tooltip.portia-map-tip{
   background:var(--surface-2);color:var(--text);
@@ -328,9 +330,14 @@ select.branch-filter-input{cursor:pointer;}
 .risk-map{display:block;width:100%;height:auto;}
 .risk-map-pt{stroke:var(--surface);stroke-width:1;opacity:0.85;cursor:pointer;}
 .risk-map-pt:hover{opacity:1;stroke:var(--cream);stroke-width:1.5;}
-.map-legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;}
-.map-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-dim);}
-.map-legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+.map-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+.map-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-dim);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:999px;
+  padding:4px 12px;cursor:pointer;font-family:inherit;transition:border-color .12s,opacity .12s;-webkit-tap-highlight-color:transparent;}
+.map-legend-item:hover{border-color:var(--border-strong);color:var(--text);}
+.map-legend-item:focus-visible{outline:2px solid var(--moss-bright);outline-offset:2px;}
+.map-legend-item.legend-off{opacity:0.45;text-decoration:line-through;}
+.map-legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0;}
 
 /* Hazard cells ------------------------------------------------------- */
 .h{color:white;text-align:center;font-size:0.74rem;font-weight:500;white-space:nowrap;}
@@ -361,7 +368,7 @@ select.branch-filter-input{cursor:pointer;}
 #error pre{background:var(--surface-2);padding:12px;border-radius:8px;text-align:left;display:inline-block;margin-top:14px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem;max-width:600px;overflow:auto;}
 
 /* Responsive --------------------------------------------------------- */
-/* Tablet — sidebar collapses to a top bar. The brand sits left, theme
+/* Tablet - sidebar collapses to a top bar. The brand sits left, theme
    switch right, nav scrolls horizontally below. margin-top:auto and
    width:100% on .theme-switch only make sense in the desktop column
    layout, so they're overridden here. */
@@ -393,7 +400,7 @@ select.branch-filter-input{cursor:pointer;}
   .ftr{padding:12px 20px;}
 }
 
-/* Phone — tighten paddings, drop multi-column grids to single column.
+/* Phone - tighten paddings, drop multi-column grids to single column.
    Keep tabs horizontally scrollable rather than wrapping (preserves
    tab order). Tables stay overflow-x:auto via .tbl-wrap. */
 @media (max-width: 600px){

@@ -1,4 +1,4 @@
-/* Portia dashboard template — client-side renderer with i18n.
+/* Portia dashboard template - client-side renderer with i18n.
  * Reads `?d=<base64url-gzipped-json>` (or `?id=<gist_id>`), plus
  * optional `?lang=<en|es>`, decompresses/fetches the payload, and
  * populates the HTML scaffold in index.html with the FSP's data.
@@ -11,22 +11,22 @@
  *     country_display: "Colombia",   // pretty country phrase
  *     gen_date: "May 23, 2026",
  *     source_note: "Source: ..." | null,
- *     score_max: 10,                 // all scores are on a 0–score_max scale
+ *     score_max: 10,                 // all scores are on a 0-score_max scale
  *     kpi: {
  *       total: 190, high: 96, medium: 94, low: 0,
- *       avg: 5.8,                      // 0–10
+ *       avg: 5.8,                      // 0-10
  *       top_hazard_code: "LS",         // hazard code, stable across langs
  *       top_hazard_label: "Landslide"  // English fallback if no code
  *     },
  *     tier: { label: "High", color: "#96253a" },  // canonical English
  *     hazards: [
- *       { code:"EQ", name:"Earthquake", value: 3.0 },  // 0–4 hazard means
+ *       { code:"EQ", name:"Earthquake", value: 3.0 },  // 0-4 hazard means
  *       ...
  *     ],
- *     worst: { name, city, score, tier } | null,   // score 0–10
+ *     worst: { name, city, score, tier } | null,   // score 0-10
  *     best:  { name, city, score, tier } | null,
  *     branches: [
- *       // score 0–10; settlement "U"|"P"|"R" (urban/peri-urban/rural);
+ *       // score 0-10; settlement "U"|"P"|"R" (urban/peri-urban/rural);
  *       // lat/lon present only when the branch was geocoded.
  *       { name, city, state, match_type, score, tier, settlement, h:[0-4]*8, lat?, lon? },
  *       ...
@@ -51,7 +51,7 @@
  * branches[].tier, branches[].match_type) are emitted in canonical English by
  * the Python tool. The dashboard maps them client-side to the active language
  * via the LOCALES dict below. Hazard codes (EQ, TS, ...) and tier labels
- * (High, Medium, Low, Unmatched) are the join keys — keep them in sync with
+ * (High, Medium, Low, Unmatched) are the join keys - keep them in sync with
  * the Python tool's HAZARDS / _risk_tier values.
  */
 
@@ -68,7 +68,7 @@
       // Page chrome
       app_eyebrow: "Portfolio Climate Risk Assessment",
       sidebar_section: "Climate Risk",
-      page_title: (fsp) => `Portia PCRA — ${fsp}`,
+      page_title: (fsp) => `Portia PCRA - ${fsp}`,
       portfolio_tier: (tier) => `Portfolio · ${tier}`,
       error_title: "Could not render dashboard",
       error_body: "The dashboard payload couldn't be parsed.",
@@ -124,7 +124,7 @@
         `${unmatched} of ${total} branches could not be assessed.`,
       coverage_banner_hint:
         'Filter the Branch Risk Table by Match → "not found" to see them.',
-      hazard_profile_title: "Hazard exposure profile (portfolio mean, 0–4 scale)",
+      hazard_profile_title: "Hazard exposure profile (portfolio mean, 0-4 scale)",
       worst_branch_title: "Worst-exposed branch",
       best_branch_title: "Best-positioned branch",
       score_word: "score",
@@ -147,22 +147,22 @@
       table_col_tier: "Tier",
 
       // Water tab
-      water_title: (country) => `🌊 Water risk — ${country}`,
+      water_title: (country) => `Water risk - ${country}`,
       water_source: "Source: WRI Aqueduct 4.0 country-level baseline (scored 0 = no risk, 5 = extreme).",
       water_stress: "Water stress",
       water_drought: "Drought",
       water_region: (r) => `Region: ${r}`,
 
       // Trajectory tab
-      trajectory_title: (country) => `📈 Climate trajectory — ${country}`,
-      trajectory_source: "CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline. Source: World Bank CCKP.",
+      trajectory_title: (country) => `Climate trajectory - ${country}`,
+      trajectory_source: "CMIP6 SSP2-4.5 ensemble, 2040-2059 vs. CRU 1991-2020 baseline. Source: World Bank CCKP.",
       trajectory_base_temp: "Baseline temp",
       trajectory_future_temp: "2050 temp",
       trajectory_delta_temp: "Δ temperature",
       trajectory_delta_precip: "Δ precipitation",
 
       // Site tab
-      site_title: "🌡 Site climate",
+      site_title: "Site climate",
       site_source: "Annual climatology averages at each branch's coordinates (NASA POWER 30-year climatology).",
       site_col_branch: "Branch",
       site_col_city: "City",
@@ -173,15 +173,15 @@
       site_col_wind: "Wind 10m (m/s)",
 
       // Context tab
-      context_title: (country) => `🌱 Country context — ${country}`,
-      context_source: "Source: ND-GAIN Country Index — overall climate-adaptation score (0–100, higher is better), broken into vulnerability (0–1, lower is better) and readiness (0–1, higher is better).",
+      context_title: (country) => `Country context - ${country}`,
+      context_source: "Source: ND-GAIN Country Index - overall climate-adaptation score (0-100, higher is better), broken into vulnerability (0-1, lower is better) and readiness (0-1, higher is better).",
       context_ndgain: "ND-GAIN score",
       context_vulnerability: "Vulnerability",
       context_readiness: "Readiness",
       context_lower_better: "lower is better",
       context_higher_better: "higher is better",
 
-      // Plain-language summary narrative — composed client-side from the
+      // Plain-language summary narrative - composed client-side from the
       // existing payload fields. `data` is built by renderSummaryNarrative().
       // Bold spans use **markdown** and are parsed safely with renderBoldMarkdown.
       narrative: (data) => {
@@ -189,14 +189,14 @@
           ? `this assessment covers all ${data.total} branches`
           : `this assessment covers ${data.total} branches (${data.matched} matched into hazard data)`;
         const worst = data.worst
-          ? ` — **${data.worst.name}** (score ${data.worst.score}, ${data.worst.tier_display}) is the worst-exposed branch`
+          ? ` - **${data.worst.name}** (score ${data.worst.score}, ${data.worst.tier_display}) is the worst-exposed branch`
           : "";
         return `${data.fsp_name} operates across ${data.country_phrase}; ${cov}. ` +
                `Portfolio sits at **${data.tier_display}** tier (avg score ${data.avg}) ` +
                `with **${data.top_hazard}** as the dominant hazard${worst}.`;
       },
 
-      // Per-panel "ⓘ" info callouts — opened via native <details>. Each
+      // Per-panel "ⓘ" info callouts - opened via native <details>. Each
       // entry is an array of [label, value] rows documenting that panel's
       // dataset resolution, version, license, and limitations.
       info_aria: "Source information",
@@ -208,7 +208,7 @@
       ],
       info_trajectory: [
         ["Resolution:", "Country-level ensemble mean."],
-        ["Dataset version:", "World Bank CCKP — CMIP6 SSP2-4.5 ensemble, 2040–2059 vs. CRU 1991–2020 baseline."],
+        ["Dataset version:", "World Bank CCKP - CMIP6 SSP2-4.5 ensemble, 2040-2059 vs. CRU 1991-2020 baseline."],
         ["License:", "CC BY 4.0."],
         ["Limitations:", "Single emissions scenario; uncertainty bands not shown."],
       ],
@@ -225,12 +225,12 @@
         ["Limitations:", "Captures national adaptation capacity; does not vary by branch location within a country."],
       ],
 
-      // Methodology tab — structured table of all input data sources.
-      methodology_title: "📘 Methodology & Data Sources",
+      // Methodology tab - structured table of all input data sources.
+      methodology_title: "Methodology & Data Sources",
       methodology_intro: "All inputs to the Light PCRA, with their resolution, vintage, and license.",
       methodology_table_headers: ["Source", "Purpose", "Resolution", "Vintage", "License"],
       methodology_sources: [
-        {source: "GFDRR ThinkHazard v2", purpose: "Hazard screening — 8 hazards each scored 0–4", resolution: "ADM2 (province / department / county)", vintage: "2017", license: "CC BY 4.0"},
+        {source: "GFDRR ThinkHazard v2", purpose: "Hazard screening - 8 hazards each scored 0-4", resolution: "ADM2 (province / department / county)", vintage: "2017", license: "CC BY 4.0"},
         {source: "GeoNames cities500", purpose: "Branch geocoding", resolution: "City centroid", vintage: "Continuously updated", license: "CC BY 4.0"},
         {source: "WRI Aqueduct 4.0", purpose: "Water stress + drought (country baseline; available to the analyst on request)", resolution: "Country aggregate", vintage: "2023", license: "CC BY 4.0"},
         {source: "World Bank CCKP", purpose: "Climate projection to 2050 (Climate Trajectory tab)", resolution: "Country, CMIP6 SSP2-4.5 ensemble", vintage: "2024", license: "CC BY 4.0"},
@@ -238,7 +238,7 @@
         {source: "ND-GAIN Country Index", purpose: "Country vulnerability + adaptation readiness (available to the analyst on request)", resolution: "Country", vintage: "Annual", license: "CC BY-SA 4.0"},
       ],
       methodology_score_title: "Composite risk score",
-      methodology_score_body: "Per-branch score is normalised to 0–10: Score = (WeightedAverage − 1) / 3 × 10, where WeightedAverage is the mean of the reported hazard levels (1–4) multiplied by a settlement factor (Rural ×1.25, Peri-urban ×1.10, Urban ×1.00 — smaller settlements carry higher climate risk: lower adaptive capacity and fewer financial buffers). Settlement type is inferred from city population (GeoNames); unknown defaults to Peri-urban. Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds: High ≥ 6.7, Medium 3.4–6.7, Low < 3.4.",
+      methodology_score_body: "Per-branch score is normalised to 0-10: Score = (WeightedAverage − 1) / 3 × 10, where WeightedAverage is the mean of the reported hazard levels (1-4) multiplied by a settlement factor (Rural ×1.25, Peri-urban ×1.10, Urban ×1.00 - smaller settlements carry higher climate risk: lower adaptive capacity and fewer financial buffers). Settlement type is inferred from city population (GeoNames); unknown defaults to Peri-urban. Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds: High ≥ 6.7, Medium 3.4-6.7, Low < 3.4.",
       methodology_limitations_title: "Limitations",
       methodology_limitations_body: "ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure. Water risk, climate trajectory, and country context are country-level; branch-level conditions can differ substantially. Sub-national alternatives are on the roadmap.",
 
@@ -250,25 +250,26 @@
       nav_map: "Risk Map",
       sidebar_toggle: "Show / hide sidebar",
       export_excel: "Export to Excel",
-      export_failed: "Sorry — the Excel export failed. Please try again.",
+      export_failed: "Sorry - the Excel export failed. Please try again.",
       table_col_settlement: "Settlement",
       filter_settlement: "Settlement",
       settlement_U: "Urban",
       settlement_P: "Peri-urban",
       settlement_R: "Rural",
       regions_title: "Region risk scores",
-      regions_intro: "Average composite score (0–10) of the matched branches in each region. Click a column to sort.",
+      regions_intro: "Average composite score (0-10) of the matched branches in each region. Click a column to sort.",
       regions_col_region: "Region",
       regions_col_branches: "Branches",
-      map_title: "🗺 Branch risk map",
+      map_title: "Branch risk map",
       map_intro: "Geocoded branches plotted by location, coloured by tier and sized by score.",
       map_note: (shown, total) => `Showing ${shown} of ${total} branches with coordinates.`,
+      map_toggle_hint: "Click to show or hide this risk tier",
     },
     es: {
       // Page chrome
       app_eyebrow: "Evaluación de Riesgo Climático del Portafolio",
       sidebar_section: "Riesgo climático",
-      page_title: (fsp) => `Portia PCRA — ${fsp}`,
+      page_title: (fsp) => `Portia PCRA - ${fsp}`,
       portfolio_tier: (tier) => `Cartera · ${tier}`,
       error_title: "No se pudo renderizar el panel",
       error_body: "No se pudo procesar el contenido del panel.",
@@ -324,7 +325,7 @@
         `${unmatched} de ${total} sucursales no pudieron ser evaluadas.`,
       coverage_banner_hint:
         'Filtra la Tabla de riesgo por sucursal en Coincidencia → "sin coincidencia" para verlas.',
-      hazard_profile_title: "Perfil de exposición a amenazas (promedio del portafolio, escala 0–4)",
+      hazard_profile_title: "Perfil de exposición a amenazas (promedio del portafolio, escala 0-4)",
       worst_branch_title: "Sucursal más expuesta",
       best_branch_title: "Sucursal mejor posicionada",
       score_word: "puntaje",
@@ -347,22 +348,22 @@
       table_col_tier: "Nivel",
 
       // Water tab
-      water_title: (country) => `🌊 Riesgo hídrico — ${country}`,
+      water_title: (country) => `Riesgo hídrico - ${country}`,
       water_source: "Fuente: línea base nacional WRI Aqueduct 4.0 (puntuado 0 = sin riesgo, 5 = extremo).",
       water_stress: "Estrés hídrico",
       water_drought: "Sequía",
       water_region: (r) => `Región: ${r}`,
 
       // Trajectory tab
-      trajectory_title: (country) => `📈 Trayectoria climática — ${country}`,
-      trajectory_source: "Ensamble CMIP6 SSP2-4.5, 2040–2059 vs. línea base CRU 1991–2020. Fuente: World Bank CCKP.",
+      trajectory_title: (country) => `Trayectoria climática - ${country}`,
+      trajectory_source: "Ensamble CMIP6 SSP2-4.5, 2040-2059 vs. línea base CRU 1991-2020. Fuente: World Bank CCKP.",
       trajectory_base_temp: "Temp. base",
       trajectory_future_temp: "Temp. 2050",
       trajectory_delta_temp: "Δ temperatura",
       trajectory_delta_precip: "Δ precipitación",
 
       // Site tab
-      site_title: "🌡 Clima del sitio",
+      site_title: "Clima del sitio",
       site_source: "Promedios climatológicos anuales en las coordenadas de cada sucursal (climatología NASA POWER de 30 años).",
       site_col_branch: "Sucursal",
       site_col_city: "Ciudad",
@@ -373,21 +374,21 @@
       site_col_wind: "Viento 10m (m/s)",
 
       // Context tab
-      context_title: (country) => `🌱 Contexto del país — ${country}`,
-      context_source: "Fuente: Índice de País ND-GAIN — puntuación general de adaptación climática (0–100, mayor es mejor), desglosada en vulnerabilidad (0–1, menor es mejor) y preparación (0–1, mayor es mejor).",
+      context_title: (country) => `Contexto del país - ${country}`,
+      context_source: "Fuente: Índice de País ND-GAIN - puntuación general de adaptación climática (0-100, mayor es mejor), desglosada en vulnerabilidad (0-1, menor es mejor) y preparación (0-1, mayor es mejor).",
       context_ndgain: "Puntaje ND-GAIN",
       context_vulnerability: "Vulnerabilidad",
       context_readiness: "Preparación",
       context_lower_better: "menor es mejor",
       context_higher_better: "mayor es mejor",
 
-      // Plain-language summary narrative — Spanish version.
+      // Plain-language summary narrative - Spanish version.
       narrative: (data) => {
         const cov = data.coverage_all
           ? `esta evaluación cubre las ${data.total} sucursales`
           : `esta evaluación cubre ${data.total} sucursales (${data.matched} con coincidencia)`;
         const worst = data.worst
-          ? ` — **${data.worst.name}** (puntaje ${data.worst.score}, ${data.worst.tier_display}) es la sucursal más expuesta`
+          ? ` - **${data.worst.name}** (puntaje ${data.worst.score}, ${data.worst.tier_display}) es la sucursal más expuesta`
           : "";
         return `${data.fsp_name} opera en ${data.country_phrase}; ${cov}. ` +
                `La cartera está en el nivel **${data.tier_display}** (puntaje promedio ${data.avg}) ` +
@@ -404,7 +405,7 @@
       ],
       info_trajectory: [
         ["Resolución:", "Promedio nacional del ensamble."],
-        ["Versión:", "World Bank CCKP — ensamble CMIP6 SSP2-4.5, 2040–2059 vs. línea base CRU 1991–2020."],
+        ["Versión:", "World Bank CCKP - ensamble CMIP6 SSP2-4.5, 2040-2059 vs. línea base CRU 1991-2020."],
         ["Licencia:", "CC BY 4.0."],
         ["Limitaciones:", "Un solo escenario de emisiones; no se muestran bandas de incertidumbre."],
       ],
@@ -421,12 +422,12 @@
         ["Limitaciones:", "Captura la capacidad nacional de adaptación; no varía por ubicación de sucursal dentro del país."],
       ],
 
-      // Methodology tab — Spanish.
-      methodology_title: "📘 Metodología y fuentes de datos",
+      // Methodology tab - Spanish.
+      methodology_title: "Metodología y fuentes de datos",
       methodology_intro: "Todas las entradas del Light PCRA, con su resolución, vigencia y licencia.",
       methodology_table_headers: ["Fuente", "Propósito", "Resolución", "Vigencia", "Licencia"],
       methodology_sources: [
-        {source: "GFDRR ThinkHazard v2", purpose: "Detección de amenazas — 8 amenazas cada una 0–4", resolution: "ADM2 (provincia / departamento / condado)", vintage: "2017", license: "CC BY 4.0"},
+        {source: "GFDRR ThinkHazard v2", purpose: "Detección de amenazas - 8 amenazas cada una 0-4", resolution: "ADM2 (provincia / departamento / condado)", vintage: "2017", license: "CC BY 4.0"},
         {source: "GeoNames cities500", purpose: "Geocodificación de sucursales", resolution: "Centroide de ciudad", vintage: "Actualización continua", license: "CC BY 4.0"},
         {source: "WRI Aqueduct 4.0", purpose: "Estrés hídrico + sequía (línea base nacional; disponible para el analista a solicitud)", resolution: "Agregado nacional", vintage: "2023", license: "CC BY 4.0"},
         {source: "World Bank CCKP", purpose: "Proyección climática a 2050 (pestaña Trayectoria climática)", resolution: "Nacional, ensamble CMIP6 SSP2-4.5", vintage: "2024", license: "CC BY 4.0"},
@@ -434,7 +435,7 @@
         {source: "Índice de País ND-GAIN", purpose: "Vulnerabilidad + preparación de adaptación nacional (disponible para el analista a solicitud)", resolution: "Nacional", vintage: "Anual", license: "CC BY-SA 4.0"},
       ],
       methodology_score_title: "Puntaje compuesto de riesgo",
-      methodology_score_body: "El puntaje por sucursal se normaliza a 0–10: Puntaje = (PromedioPonderado − 1) / 3 × 10, donde PromedioPonderado es la media de los niveles de amenaza reportados (1–4) multiplicada por un factor de asentamiento (Rural ×1.25, Periurbano ×1.10, Urbano ×1.00 — los asentamientos más pequeños tienen mayor riesgo climático: menor capacidad de adaptación y menos colchones financieros). El tipo de asentamiento se infiere de la población de la ciudad (GeoNames); si se desconoce, se asume Periurbano. Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs. Umbrales: Alto ≥ 6.7, Medio 3.4–6.7, Bajo < 3.4.",
+      methodology_score_body: "El puntaje por sucursal se normaliza a 0-10: Puntaje = (PromedioPonderado − 1) / 3 × 10, donde PromedioPonderado es la media de los niveles de amenaza reportados (1-4) multiplicada por un factor de asentamiento (Rural ×1.25, Periurbano ×1.10, Urbano ×1.00 - los asentamientos más pequeños tienen mayor riesgo climático: menor capacidad de adaptación y menos colchones financieros). El tipo de asentamiento se infiere de la población de la ciudad (GeoNames); si se desconoce, se asume Periurbano. Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs. Umbrales: Alto ≥ 6.7, Medio 3.4-6.7, Bajo < 3.4.",
       methodology_limitations_title: "Limitaciones",
       methodology_limitations_body: "La metodología ThinkHazard v2 es de 2017; la granularidad ADM2 puede ser más gruesa que la exposición real de una sucursal. Riesgo hídrico, trayectoria climática y contexto nacional son a nivel país; las condiciones a nivel de sucursal pueden diferir sustancialmente. Hay alternativas sub-nacionales en la hoja de ruta.",
 
@@ -446,19 +447,20 @@
       nav_map: "Mapa de riesgo",
       sidebar_toggle: "Mostrar / ocultar barra lateral",
       export_excel: "Exportar a Excel",
-      export_failed: "Lo sentimos — la exportación a Excel falló. Inténtalo de nuevo.",
+      export_failed: "Lo sentimos - la exportación a Excel falló. Inténtalo de nuevo.",
       table_col_settlement: "Asentamiento",
       filter_settlement: "Asentamiento",
       settlement_U: "Urbano",
       settlement_P: "Periurbano",
       settlement_R: "Rural",
       regions_title: "Puntajes de riesgo por región",
-      regions_intro: "Puntaje compuesto promedio (0–10) de las sucursales con coincidencia en cada región. Haz clic en una columna para ordenar.",
+      regions_intro: "Puntaje compuesto promedio (0-10) de las sucursales con coincidencia en cada región. Haz clic en una columna para ordenar.",
       regions_col_region: "Región",
       regions_col_branches: "Sucursales",
-      map_title: "🗺 Mapa de riesgo de sucursales",
+      map_title: "Mapa de riesgo de sucursales",
       map_intro: "Sucursales geocodificadas ubicadas por coordenadas, coloreadas por nivel y dimensionadas por puntaje.",
       map_note: (shown, total) => `Mostrando ${shown} de ${total} sucursales con coordenadas.`,
+      map_toggle_hint: "Haz clic para mostrar u ocultar este nivel de riesgo",
     },
   };
 
@@ -470,7 +472,7 @@
     "Landslide": "LS", "Extreme Heat": "EH",
   };
 
-  // Mutable runtime state — currentLang is initialized at main(); cachedPayload
+  // Mutable runtime state - currentLang is initialized at main(); cachedPayload
   // is the parsed payload, kept so we can re-render on language switch without
   // refetching.
   let currentLang = "en";
@@ -515,7 +517,7 @@
     document.documentElement.setAttribute("lang", lang);
     try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (_) {}
     if (!cachedPayload) return;
-    // Preserve the active tab when re-rendering — buildNav re-creates the
+    // Preserve the active tab when re-rendering - buildNav re-creates the
     // nav and would otherwise reset to the first tab.
     const active = document.querySelector(".nav-item.active");
     const activeSlug = active ? active.dataset.tab : null;
@@ -526,10 +528,10 @@
   // ── URL decode ──────────────────────────────────────────────────────
   async function getPayload() {
     const params = new URLSearchParams(window.location.search);
-    // Strategy A: ?id=<gist_id> — fetch the JSON payload from a GitHub gist.
+    // Strategy A: ?id=<gist_id> - fetch the JSON payload from a GitHub gist.
     const gistId = params.get("id");
     if (gistId) return await fetchGistPayload(gistId);
-    // Strategy B: ?d=<base64url-gzip-json> — decode inline.
+    // Strategy B: ?d=<base64url-gzip-json> - decode inline.
     const raw = params.get("d") || window.location.hash.replace(/^#d=/, "");
     if (!raw) throw new Error("No data parameter (?id=... or ?d=...) in URL.");
     const b64 = raw.replace(/-/g, "+").replace(/_/g, "/").padEnd(
@@ -542,7 +544,7 @@
   }
 
   async function fetchGistPayload(gistId) {
-    // Public api.github.com endpoint — no auth needed once we have the ID.
+    // Public api.github.com endpoint - no auth needed once we have the ID.
     const r = await fetch(
       `https://api.github.com/gists/${encodeURIComponent(gistId)}`,
       {headers: {"Accept": "application/vnd.github+json"}}
@@ -587,7 +589,7 @@
   }
 
   function fmt(v, digits = 2, unit = "") {
-    if (v == null || isNaN(v)) return "—";
+    if (v == null || isNaN(v)) return "-";
     return Number(v).toFixed(digits) + unit;
   }
 
@@ -606,7 +608,7 @@
     if (v >= 1) return "#fde047";
     return "#8bbc3a";
   }
-  // Coverage color and banner — surface partial branch coverage prominently.
+  // Coverage color and banner - surface partial branch coverage prominently.
   // Thresholds: 100% green, 95-99% yellow, 90-94% amber, 70-89% amber-strong,
   // < 70% red.
   function coverageColor(pct) {
@@ -625,7 +627,7 @@
     banner.hidden = false;
     const pct = cov.uploaded > 0 ? (cov.matched / cov.uploaded) * 100 : 100;
     banner.classList.add(pct < 70 ? "cb-alert" : "cb-warn");
-    banner.appendChild(el("span", {class:"coverage-banner-icon", "aria-hidden":"true"}, "⚠"));
+    banner.appendChild(el("span", {class:"coverage-banner-icon", "aria-hidden":"true"}, ""));
     const txt = el("div", {class:"coverage-banner-text"});
     txt.appendChild(el("strong", {}, t("coverage_banner_lead", cov.unmatched, cov.uploaded)));
     txt.appendChild(document.createTextNode(" " + t("coverage_banner_hint")));
@@ -694,23 +696,23 @@
     if (/fuzzy/i.test(mt)) return t("match_fuzzy");
     return t("match_not_found");
   }
-  // Settlement code (U/P/R) → localized label. Unknown codes show "—".
+  // Settlement code (U/P/R) → localized label. Unknown codes show "-".
   function settlementLabel(code) {
-    if (!code) return "—";
-    return t("settlement_" + code) || "—";
+    if (!code) return "-";
+    return t("settlement_" + code) || "-";
   }
   function settlementClass(code) {
     return {U:"s-u", P:"s-p", R:"s-r"}[code] || "s-x";
   }
-  // Score column header carries the explicit 0–max range, e.g. "Score (0–10)".
+  // Score column header carries the explicit 0-max range, e.g. "Score (0-10)".
   function scoreColLabel(payload) {
     const max = (payload && payload.score_max) || 10;
-    return t("table_col_score") + " (0–" + max + ")";
+    return t("table_col_score") + " (0-" + max + ")";
   }
   // Format a score with its scale suffix, e.g. "5.8 / 10".
   function scoreWithMax(score, payload) {
     const max = (payload && payload.score_max) || 10;
-    if (score == null || isNaN(score)) return "—";
+    if (score == null || isNaN(score)) return "-";
     return score + " / " + max;
   }
 
@@ -785,7 +787,7 @@
     const topHazardCode = payload.kpi.top_hazard_code;
     const topHazard = topHazardCode
       ? t("hazard_" + topHazardCode)
-      : (payload.kpi.top_hazard_label || "—");
+      : (payload.kpi.top_hazard_label || "-");
     const data = {
       fsp_name: payload.fsp_name,
       country_phrase: payload.country_display || "",
@@ -831,7 +833,7 @@
 
     // Resolve top-hazard display: prefer kpi.top_hazard_code (stable), fall
     // back to reverse-mapping the English label.
-    let topHazardDisplay = "—";
+    let topHazardDisplay = "-";
     if (payload.kpi.top_hazard_code) {
       topHazardDisplay = t("hazard_" + payload.kpi.top_hazard_code);
     } else if (payload.kpi.top_hazard_label) {
@@ -901,7 +903,7 @@
     return c;
   }
 
-  // Branch table — interactive: text-filter, region/tier/match dropdowns,
+  // Branch table - interactive: text-filter, region/tier/match dropdowns,
   // and column sort via clickable headers. State (filters + sort) is held
   // in `branchState` and a single applyFilters() call re-renders the tbody.
   const TIER_ORDER = {High:3, Medium:2, Low:1, Unmatched:0};
@@ -916,7 +918,7 @@
     sortKey: null,
     sortDir: 1,
   };
-  // Sort weight for the settlement column — rural (higher risk) sorts highest.
+  // Sort weight for the settlement column - rural (higher risk) sorts highest.
   const SETTLEMENT_ORDER = {R:3, P:2, U:1};
 
   // Bucket the raw match_type into a canonical key for filtering. The key
@@ -1113,13 +1115,13 @@
     setlTd.appendChild(el("span", {
       class:"pill " + settlementClass(b.settlement),
       title: settlementLabel(b.settlement),
-    }, b.settlement || "—"));
+    }, b.settlement || "-"));
     tr.appendChild(setlTd);
     const matchTd = el("td", {class:"ccenter"});
     matchTd.appendChild(el("span", {class:"pill " + matchClass(b.match_type)},
                               matchLabel(b.match_type)));
     tr.appendChild(matchTd);
-    tr.appendChild(el("td", {class:"ccenter score"}, b.score == null ? "—" : String(b.score)));
+    tr.appendChild(el("td", {class:"ccenter score"}, b.score == null ? "-" : String(b.score)));
     const tierTd = el("td", {class:"ccenter"});
     tierTd.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, tierLabel(b.tier)));
     tr.appendChild(tierTd);
@@ -1157,7 +1159,7 @@
   }
 
   // ── Region score table ──────────────────────────────────────────────
-  // Aggregated per-state rows from payload.regions (count / avg 0–10 / tier /
+  // Aggregated per-state rows from payload.regions (count / avg 0-10 / tier /
   // High-Medium-Low counts). Sortable like the branch table; exports to Excel.
   const REGION_TIER_ORDER = {High:3, Medium:2, Low:1, Unmatched:0};
   const regionState = {rows: [], colDefs: [], sortKey: null, sortDir: 1};
@@ -1235,7 +1237,7 @@
       const tr = el("tr");
       tr.appendChild(el("td", {class:"bname"}, r.name));
       tr.appendChild(el("td", {class:"ccenter"}, String(r.count)));
-      tr.appendChild(el("td", {class:"ccenter score"}, r.avg_score == null ? "—" : String(r.avg_score)));
+      tr.appendChild(el("td", {class:"ccenter score"}, r.avg_score == null ? "-" : String(r.avg_score)));
       const tierTd = el("td", {class:"ccenter"});
       tierTd.appendChild(el("span", {class:"tp " + tierClass(r.tier)}, tierLabel(r.tier)));
       tr.appendChild(tierTd);
@@ -1259,6 +1261,7 @@
   let _mapTiles = null;     // current tile layer
   let _mapPayload = null;   // payload kept for lazy init
   let _mapReady = false;    // whether the canvas has been initialised
+  let _mapLayers = {};      // per-tier Leaflet layer groups (for toggling)
 
   function cartoTileUrl() {
     const light = document.documentElement.getAttribute("data-theme") === "light";
@@ -1290,12 +1293,17 @@
     card.appendChild(el("div", {class:"card-title"}, t("map_title")));
     card.appendChild(el("div", {class:"card-sub mb12"}, t("map_intro")));
     card.appendChild(el("div", {id:"risk-map-canvas"}));
+    // Legend doubles as a per-tier toggle: click to show/hide that tier.
     const legend = el("div", {class:"map-legend"});
     [["High", t("tier_High")], ["Medium", t("tier_Medium")], ["Low", t("tier_Low")]]
       .forEach(([canon, label]) => {
-        const item = el("span", {class:"map-legend-item"});
+        const item = el("button", {
+          type:"button", class:"map-legend-item", "data-tier":canon,
+          "aria-pressed":"true", title:t("map_toggle_hint"),
+        });
         item.appendChild(el("span", {class:"map-legend-dot", style:`background:${MAP_TIER_COLOR[canon]}`}));
         item.appendChild(document.createTextNode(label));
+        item.addEventListener("click", () => toggleMapTier(canon, item));
         legend.appendChild(item);
       });
     card.appendChild(legend);
@@ -1321,7 +1329,15 @@
     if (!window.L) { renderMapSvgFallback(canvas, pts); return; }
     const L = window.L;
     _map = L.map(canvas, {scrollWheelZoom: true});
+    // Drop Leaflet's own prefix (the flag + "Leaflet" link). The OSM/CARTO
+    // tile credit stays - it's required by the free tile usage terms.
+    _map.attributionControl.setPrefix(false);
     addMapTiles();
+    // One layer group per tier so the legend can toggle them on/off.
+    _mapLayers = {
+      High: L.layerGroup(), Medium: L.layerGroup(),
+      Low: L.layerGroup(), Unmatched: L.layerGroup(),
+    };
     const latlngs = [];
     // Draw worst last so High markers sit on top.
     pts.slice().sort((a, b) => (a.score || 0) - (b.score || 0)).forEach(p => {
@@ -1333,21 +1349,31 @@
         fillOpacity: 0.85,
       });
       m.bindTooltip(mapTooltipHtml(p), {className: "portia-map-tip", sticky: true, direction: "top", opacity: 1});
-      m.addTo(_map);
+      (_mapLayers[p.tier] || _mapLayers.Unmatched).addLayer(m);
       latlngs.push([p.lat, p.lon]);
     });
+    Object.values(_mapLayers).forEach(g => g.addTo(_map));
     if (latlngs.length === 1) _map.setView(latlngs[0], 9);
     else _map.fitBounds(latlngs, {padding: [30, 30]});
   }
 
+  // Toggle a tier's markers on/off from the legend.
+  function toggleMapTier(tier, btn) {
+    const group = _mapLayers[tier];
+    if (!_map || !group) return;
+    const on = _map.hasLayer(group);
+    if (on) { _map.removeLayer(group); btn.classList.add("legend-off"); btn.setAttribute("aria-pressed", "false"); }
+    else { group.addTo(_map); btn.classList.remove("legend-off"); btn.setAttribute("aria-pressed", "true"); }
+  }
+
   function mapTooltipHtml(p) {
     const max = (_mapPayload && _mapPayload.score_max) || 10;
-    const score = p.score == null ? "—" : p.score + " / " + max;
+    const score = p.score == null ? "-" : p.score + " / " + max;
     const row = (label, value) =>
       `<div class="ptip-row"><span>${xmlEscape(label)}</span><b>${xmlEscape(value)}</b></div>`;
     return `<div class="ptip-title">${xmlEscape(p.name || "")}</div>` +
-      row(t("table_col_city"), p.city || "—") +
-      row(t("table_col_region"), p.state || "—") +
+      row(t("table_col_city"), p.city || "-") +
+      row(t("table_col_region"), p.state || "-") +
       row(t("table_col_settlement"), settlementLabel(p.settlement)) +
       row(t("table_col_score"), score) +
       row(t("table_col_tier"), tierLabel(p.tier));
@@ -1444,7 +1470,7 @@
   // ── Excel export (dependency-free .xlsx writer) ──────────────────────
   // Builds a minimal OOXML workbook (one sheet per table, inline strings) and
   // packs it into a ZIP with STORED (uncompressed) entries + CRC32. No
-  // external library — this repo ships only plain files (see CLAUDE.md).
+  // external library - this repo ships only plain files (see CLAUDE.md).
   const CRC_TABLE = (function () {
     const tbl = new Uint32Array(256);
     for (let n = 0; n < 256; n++) {
@@ -1635,7 +1661,7 @@
     });
   }
 
-  // Theme toggle — initial value is applied by an inline script in
+  // Theme toggle - initial value is applied by an inline script in
   // index.html <head> before first paint, so by the time this runs the
   // attribute is already set correctly. We just wire the click handler
   // and persist subsequent flips. Storage key is kept in sync with the
@@ -1654,7 +1680,7 @@
     });
   }
 
-  // Language switcher — initial value matches the lang attribute the
+  // Language switcher - initial value matches the lang attribute the
   // inline script in index.html set before first paint. Subsequent
   // changes call setLang() which re-renders.
   function initLangSwitcher() {
@@ -1677,7 +1703,7 @@
   }
 
   // Run the full render pipeline. Called once on initial load, and again
-  // by setLang() when the user switches language — every renderX function
+  // by setLang() when the user switches language - every renderX function
   // clears its target container first so re-rendering is idempotent.
   function renderAll(payload) {
     buildNav(payload);
@@ -1706,7 +1732,7 @@
       const err = document.getElementById("error");
       err.hidden = false;
       err.innerHTML = `
-        <h2>⚠ ${t("error_title")}</h2>
+        <h2>${t("error_title")}</h2>
         <p>${t("error_body")}</p>
         <pre>${(e && e.message) || String(e)}</pre>
       `;

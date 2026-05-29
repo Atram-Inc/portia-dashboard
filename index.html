@@ -16,7 +16,7 @@
 <script>
   /* Apply persisted (or system-preferred) theme BEFORE first paint so the
      user never sees a flash of the wrong theme. Mirrors the public API
-     used by app.js — keep them in sync. */
+     used by app.js - keep them in sync. */
   (function () {
     try {
       var stored = localStorage.getItem("portia.theme");
@@ -34,7 +34,7 @@
   /* Apply the initial language BEFORE first paint so the loading spinner
      label renders in the right language. Resolution order:
      ?lang= URL param → localStorage "portia.lang" → navigator.language
-     → "en". Storage key + supported list are mirrored in app.js — keep
+     → "en". Storage key + supported list are mirrored in app.js - keep
      them in sync. */
   (function () {
     try {
@@ -60,7 +60,7 @@
   })();
 </script>
 <style>
-  /* Critical CSS — inlined so it paints on first render, before style.css
+  /* Critical CSS - inlined so it paints on first render, before style.css
      loads and before app.js fetches the gist payload. Without this, the
      user briefly sees a blank/white page while the network requests run.
      Keep colors in sync with style.css :root tokens. */
@@ -108,7 +108,7 @@
 <link rel="stylesheet" href="style.css"/>
 <noscript>
   <style>
-    /* If JS is disabled, app.js can't hide the spinner — so hide it here
+    /* If JS is disabled, app.js can't hide the spinner - so hide it here
        and let the <noscript> message in <body> take over. */
     #loading { display: none; }
   </style>
@@ -176,7 +176,6 @@
           </svg>
         </button>
         <label class="lang-switcher">
-          <span class="lang-switcher-icon" aria-hidden="true">🌐</span>
           <select id="lang-switcher" aria-label="Language">
             <option value="en">English</option>
             <option value="es">Español</option>
