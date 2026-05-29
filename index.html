@@ -127,8 +127,17 @@
 </noscript>
 <div class="app" id="app" hidden>
   <aside class="sidebar">
-    <div class="brand">
+    <div class="sidebar-head">
       <img class="brand-logo" src="assets/atram_logo.png" alt="Atram"/>
+      <button type="button" id="sidebar-toggle" class="sidebar-toggle"
+              aria-expanded="true" aria-label="Collapse or expand sidebar"
+              title="Collapse or expand sidebar">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
     </div>
     <nav class="nav" id="nav"></nav>
     <button type="button" id="theme-toggle" class="theme-switch"
@@ -154,18 +163,6 @@
       </span>
     </button>
   </aside>
-  <!-- Collapse handle: a chevron straddling the sidebar's right border.
-       Lives outside .sidebar so it survives the collapse (which hides the
-       aside) and slides to the screen edge to re-open. -->
-  <button type="button" id="sidebar-toggle" class="sidebar-toggle"
-          aria-expanded="true" aria-label="Collapse or expand sidebar"
-          title="Collapse or expand sidebar">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
-         stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-         stroke-linejoin="round" aria-hidden="true">
-      <polyline points="15 18 9 12 15 6"/>
-    </svg>
-  </button>
   <main class="main">
     <header class="topbar">
       <div class="topbar-left">

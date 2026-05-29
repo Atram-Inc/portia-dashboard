@@ -741,12 +741,14 @@
       return false;
     });
     visible.forEach((d, i) => {
+      const label = t(d.key);
       const a = el("a", {
         class: "nav-item" + (i === 0 ? " active" : ""),
         "data-tab": d.slug,
+        title: label,   // tooltip — identifies the icon when the rail is collapsed
       });
       a.appendChild(el("span", {class:"nav-ico nav-ico-" + d.slug}));
-      a.appendChild(el("span", {}, t(d.key)));
+      a.appendChild(el("span", {class:"nav-label"}, label));
       a.addEventListener("click", () => setActive(d.slug));
       nav.appendChild(a);
     });
@@ -1658,6 +1660,8 @@
       const now = !(app && app.classList.contains("sidebar-collapsed"));
       applySidebarState(now);
       try { localStorage.setItem(SIDEBAR_KEY, now ? "1" : "0"); } catch (_) {}
+      // The content area resized — let the map re-fit after the transition.
+      if (_map) setTimeout(() => _map.invalidateSize(), 230);
     });
   }
 
