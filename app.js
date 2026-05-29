@@ -720,6 +720,11 @@
       n.classList.toggle("active", n.dataset.tab === slug));
     document.querySelectorAll(".panel").forEach(p =>
       p.classList.toggle("active", p.id === "tab-" + slug));
+    // The map can only size/init once its container is visible.
+    if (slug === "map") {
+      ensureMap();
+      if (_map) setTimeout(() => _map.invalidateSize(), 0);
+    }
   }
 
   function buildNav(payload) {
@@ -860,7 +865,9 @@
 
     const bars = document.getElementById("hazard-bars");
     bars.innerHTML = "";
-    payload.hazards.forEach(h => {
+    // Sort highest exposure first (highest bar at the top).
+    const hazardsSorted = payload.hazards.slice().sort((a, b) => (b.value || 0) - (a.value || 0));
+    hazardsSorted.forEach(h => {
       const row = el("div", {class:"hbar-row"});
       row.appendChild(el("div", {class:"hbar-l"}, hazardName(h)));
       const track = el("div", {class:"hbar-track"});
@@ -1240,86 +1247,149 @@
   }
 
   // ── Risk map ─────────────────────────────────────────────────────────
-  // Dependency-free SVG scatter of geocoded branches on an equirectangular
-  // projection, coloured by tier and sized by score. No tiles / no external
-  // library (per repo policy) — it shows the geographic spread of risk.
+  // Interactive Leaflet map (pan/zoom, themed CARTO basemap) showing the
+  // FSP's geocoded branches as circle markers coloured by tier and sized by
+  // score, with a styled hover tooltip. Leaflet loads from a CDN (the one
+  // external dependency, approved for the map). If it's unavailable we fall
+  // back to a dependency-free SVG scatter so the tab is never empty.
+  const MAP_TIER_COLOR = {
+    High: "#d8607a", Medium: "#f1974c", Low: "#8bbc3a", Unmatched: "#a8a399",
+  };
+  let _map = null;          // Leaflet map instance
+  let _mapTiles = null;     // current tile layer
+  let _mapPayload = null;   // payload kept for lazy init
+  let _mapReady = false;    // whether the canvas has been initialised
+
+  function cartoTileUrl() {
+    const light = document.documentElement.getAttribute("data-theme") === "light";
+    return light
+      ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+  }
+  function addMapTiles() {
+    if (!_map || !window.L) return;
+    if (_mapTiles) { _map.removeLayer(_mapTiles); _mapTiles = null; }
+    _mapTiles = window.L.tileLayer(cartoTileUrl(), {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    }).addTo(_map);
+  }
+
   function renderMap(payload) {
     const tab = document.getElementById("tab-map");
     tab.innerHTML = "";
+    // Tear down any previous instance (re-render happens on language switch).
+    if (_map) { try { _map.remove(); } catch (_) {} }
+    _map = null; _mapTiles = null; _mapReady = false; _mapPayload = null;
+
     const pts = (payload.branches || []).filter(b => b.lat != null && b.lon != null);
     if (!pts.length) return;
+    _mapPayload = payload;
 
     const card = el("div", {class:"card"});
     card.appendChild(el("div", {class:"card-title"}, t("map_title")));
     card.appendChild(el("div", {class:"card-sub mb12"}, t("map_intro")));
+    card.appendChild(el("div", {id:"risk-map-canvas"}));
+    const legend = el("div", {class:"map-legend"});
+    [["High", t("tier_High")], ["Medium", t("tier_Medium")], ["Low", t("tier_Low")]]
+      .forEach(([canon, label]) => {
+        const item = el("span", {class:"map-legend-item"});
+        item.appendChild(el("span", {class:"map-legend-dot", style:`background:${MAP_TIER_COLOR[canon]}`}));
+        item.appendChild(document.createTextNode(label));
+        legend.appendChild(item);
+      });
+    card.appendChild(legend);
+    card.appendChild(el("div", {class:"card-sub", style:"margin-top:8px;"},
+      t("map_note", pts.length, (payload.branches || []).length)));
+    tab.appendChild(card);
 
+    // Leaflet needs a visible, sized container, so defer init until the Map
+    // tab is actually shown (see setActive). If it's already active, init now.
+    const active = document.querySelector(".nav-item.active");
+    if (active && active.dataset.tab === "map") ensureMap();
+  }
+
+  // Lazily initialise the map the first time its tab becomes visible.
+  function ensureMap() {
+    if (_mapReady || !_mapPayload) return;
+    const canvas = document.getElementById("risk-map-canvas");
+    if (!canvas) return;
+    const pts = (_mapPayload.branches || []).filter(b => b.lat != null && b.lon != null);
+    if (!pts.length) return;
+    _mapReady = true;
+
+    if (!window.L) { renderMapSvgFallback(canvas, pts); return; }
+    const L = window.L;
+    _map = L.map(canvas, {scrollWheelZoom: true});
+    addMapTiles();
+    const latlngs = [];
+    // Draw worst last so High markers sit on top.
+    pts.slice().sort((a, b) => (a.score || 0) - (b.score || 0)).forEach(p => {
+      const sc = p.score == null ? 0 : p.score;
+      const m = L.circleMarker([p.lat, p.lon], {
+        radius: 5 + sc / 10 * 7,
+        color: "#ffffff", weight: 1, opacity: 0.9,
+        fillColor: MAP_TIER_COLOR[p.tier] || MAP_TIER_COLOR.Unmatched,
+        fillOpacity: 0.85,
+      });
+      m.bindTooltip(mapTooltipHtml(p), {className: "portia-map-tip", sticky: true, direction: "top", opacity: 1});
+      m.addTo(_map);
+      latlngs.push([p.lat, p.lon]);
+    });
+    if (latlngs.length === 1) _map.setView(latlngs[0], 9);
+    else _map.fitBounds(latlngs, {padding: [30, 30]});
+  }
+
+  function mapTooltipHtml(p) {
+    const max = (_mapPayload && _mapPayload.score_max) || 10;
+    const score = p.score == null ? "—" : p.score + " / " + max;
+    const row = (label, value) =>
+      `<div class="ptip-row"><span>${xmlEscape(label)}</span><b>${xmlEscape(value)}</b></div>`;
+    return `<div class="ptip-title">${xmlEscape(p.name || "")}</div>` +
+      row(t("table_col_city"), p.city || "—") +
+      row(t("table_col_region"), p.state || "—") +
+      row(t("table_col_settlement"), settlementLabel(p.settlement)) +
+      row(t("table_col_score"), score) +
+      row(t("table_col_tier"), tierLabel(p.tier));
+  }
+
+  // Fallback when Leaflet can't load: a simple SVG scatter (no basemap).
+  function renderMapSvgFallback(canvas, pts) {
     const W = 760, H = 460, PAD = 28;
     let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
     pts.forEach(p => {
       minLat = Math.min(minLat, p.lat); maxLat = Math.max(maxLat, p.lat);
       minLon = Math.min(minLon, p.lon); maxLon = Math.max(maxLon, p.lon);
     });
-    // Guard against a single point / zero span.
     let latSpan = maxLat - minLat || 1, lonSpan = maxLon - minLon || 1;
     minLat -= latSpan * 0.08; maxLat += latSpan * 0.08;
     minLon -= lonSpan * 0.08; maxLon += lonSpan * 0.08;
     latSpan = maxLat - minLat; lonSpan = maxLon - minLon;
-    // Keep aspect ratio roughly correct (latitude degrees ~constant; longitude
-    // degrees shrink with cos(lat)). Apply a simple cos correction.
     const cosLat = Math.cos((minLat + maxLat) / 2 * Math.PI / 180) || 1;
     const dataW = lonSpan * cosLat, dataH = latSpan;
     const scale = Math.min((W - 2 * PAD) / dataW, (H - 2 * PAD) / dataH);
     const offX = (W - dataW * scale) / 2, offY = (H - dataH * scale) / 2;
     const projX = (lon) => offX + (lon - minLon) * cosLat * scale;
     const projY = (lat) => offY + (maxLat - lat) * scale;
-
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("class", "risk-map");
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", t("map_title"));
-    const bg = document.createElementNS(svgNS, "rect");
-    bg.setAttribute("x", 0); bg.setAttribute("y", 0);
-    bg.setAttribute("width", W); bg.setAttribute("height", H);
-    bg.setAttribute("class", "risk-map-bg");
-    svg.appendChild(bg);
-
-    const tierColorVar = {
-      High: "var(--rust-bright)", Medium: "var(--amber)",
-      Low: "var(--moss-bright)", Unmatched: "var(--stone)",
-    };
-    // Draw worst on top: sort ascending so High circles paint last.
     pts.slice().sort((a, b) => (a.score || 0) - (b.score || 0)).forEach(p => {
-      const c = document.createElementNS(svgNS, "circle");
+      const c = document.createElementNS(ns, "circle");
       c.setAttribute("cx", projX(p.lon).toFixed(1));
       c.setAttribute("cy", projY(p.lat).toFixed(1));
       const sc = p.score == null ? 0 : p.score;
       c.setAttribute("r", (4 + sc / 10 * 6).toFixed(1));
-      c.setAttribute("fill", tierColorVar[p.tier] || "var(--stone)");
+      c.setAttribute("fill", MAP_TIER_COLOR[p.tier] || MAP_TIER_COLOR.Unmatched);
       c.setAttribute("class", "risk-map-pt");
-      const title = document.createElementNS(svgNS, "title");
+      const title = document.createElementNS(ns, "title");
       title.textContent = `${p.name}${p.city ? " · " + p.city : ""} · ${t("score_word")} ${sc} · ${tierLabel(p.tier)}`;
       c.appendChild(title);
       svg.appendChild(c);
     });
-    const mapWrap = el("div", {class:"risk-map-wrap"});
-    mapWrap.appendChild(svg);
-    card.appendChild(mapWrap);
-
-    // Legend
-    const legend = el("div", {class:"map-legend"});
-    [["High", t("tier_High")], ["Medium", t("tier_Medium")],
-     ["Low", t("tier_Low")]].forEach(([canon, label]) => {
-      const item = el("span", {class:"map-legend-item"});
-      item.appendChild(el("span", {class:"map-legend-dot", style:`background:${tierColorVar[canon]}`}));
-      item.appendChild(document.createTextNode(label));
-      legend.appendChild(item);
-    });
-    card.appendChild(legend);
-    card.appendChild(el("div", {class:"card-sub", style:"margin-top:8px;"},
-      t("map_note", pts.length, (payload.branches || []).length)));
-    tab.appendChild(card);
+    canvas.classList.add("risk-map-fallback");
+    canvas.appendChild(svg);
   }
 
   // Methodology panel: structured table of all data sources + score formula
@@ -1579,6 +1649,8 @@
       const next = cur === "light" ? "dark" : "light";
       document.documentElement.setAttribute("data-theme", next);
       try { localStorage.setItem("portia.theme", next); } catch (_) { /* ignore */ }
+      // Swap the basemap to match the new theme.
+      if (_map) addMapTiles();
     });
   }
 
