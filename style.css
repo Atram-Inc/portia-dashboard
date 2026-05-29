@@ -64,39 +64,39 @@ a{color:inherit;text-decoration:none;}
    `display:grid` would override the user-agent `[hidden]{display:none}`
    default, and a payload-decode failure would render an empty app shell
    alongside the error block. */
-.app:not([hidden]){display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
-/* Collapsible sidebar - toggled from the hamburger at the top-left of the
-   content area (persisted in localStorage). Desktop only: on tablet/phone the
-   sidebar is already a compact top strip, so collapsing it (and hiding the
-   nav) would do more harm than good. */
+.app:not([hidden]){display:grid;grid-template-columns:240px 1fr;min-height:100vh;transition:grid-template-columns .2s cubic-bezier(.4,0,.2,1);}
+
+/* Collapsible sidebar (mini-rail). Collapsing keeps the sidebar visible but
+   shrinks it to an icon-only rail with an expand arrow; it does not disappear.
+   Desktop only - on tablet/phone the sidebar is already a compact top strip. */
 @media (min-width: 901px){
-  .app.sidebar-collapsed:not([hidden]){grid-template-columns:1fr;}
-  .app.sidebar-collapsed .sidebar{display:none;}
+  .app.sidebar-collapsed:not([hidden]){grid-template-columns:64px 1fr;}
+  .app.sidebar-collapsed .sidebar{padding:24px 8px;}
+  .app.sidebar-collapsed .brand-logo{display:none;}
+  .app.sidebar-collapsed .sidebar-head{justify-content:center;}
+  .app.sidebar-collapsed .nav-section{display:none;}
+  .app.sidebar-collapsed .nav-item{justify-content:center;padding:9px 0;gap:0;}
+  .app.sidebar-collapsed .nav-item .nav-label{display:none;}
+  .app.sidebar-collapsed .theme-switch{display:none;}
+  .app.sidebar-collapsed .sidebar-toggle svg{transform:rotate(180deg);}
 }
 
-/* Sidebar collapse handle - a chevron straddling the sidebar's right border,
-   vertically centred (the conventional drawer-handle pattern). It's fixed to
-   the viewport (not inside .sidebar) so it stays put when the sidebar hides,
-   sliding to the screen edge to re-open. The chevron flips to point right
-   when collapsed. */
+/* Sidebar collapse arrow - a round chevron button in the sidebar header.
+   Points left to collapse; flips to point right on the rail to expand. */
+.sidebar-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 4px 16px;border-bottom:1px solid var(--border);}
 .sidebar-toggle{
-  position:fixed;top:50%;left:240px;transform:translate(-50%,-50%);z-index:60;
-  display:inline-flex;align-items:center;justify-content:center;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
   width:26px;height:26px;border-radius:50%;
-  background:var(--surface-3);color:var(--text);
-  border:1px solid var(--border-strong);
-  box-shadow:0 1px 5px rgba(0,0,0,0.35);cursor:pointer;
-  transition:left .2s cubic-bezier(.4,0,.2,1),background .12s,color .12s;
+  background:var(--surface-2);color:var(--text-dim);
+  border:1px solid var(--border);cursor:pointer;
+  transition:background .12s,color .12s,border-color .12s;
 }
-.sidebar-toggle:hover{background:var(--moss);color:#fff;border-color:var(--moss);}
+.sidebar-toggle:hover{background:var(--surface-3);color:var(--cream);border-color:var(--border-strong);}
 .sidebar-toggle:focus-visible{outline:2px solid var(--moss-bright);outline-offset:2px;}
-.sidebar-toggle svg{transition:transform .2s ease;}
-.app.sidebar-collapsed .sidebar-toggle{left:16px;}
-.app.sidebar-collapsed .sidebar-toggle svg{transform:rotate(180deg);}
+.sidebar-toggle svg{display:block;transition:transform .2s ease;}
 
 /* Sidebar ------------------------------------------------------------*/
 .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow-y:auto;}
-.brand{display:flex;align-items:center;padding:4px 8px 16px;border-bottom:1px solid var(--border);}
 .brand-logo{max-width:100%;max-height:48px;width:auto;height:auto;display:block;filter:var(--logo-filter);}
 .nav{display:flex;flex-direction:column;gap:2px;}
 .nav-section{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);padding:8px 12px 4px;}
@@ -394,7 +394,7 @@ select.branch-filter-input{cursor:pointer;}
     gap:12px;padding:12px 20px;
     border-right:none;border-bottom:1px solid var(--border);
   }
-  .brand{padding:0;border-bottom:none;flex:0 0 auto;}
+  .sidebar-head{padding:0;border-bottom:none;flex:0 0 auto;}
   .brand-logo{max-height:32px;}
   .theme-switch{
     width:auto;height:30px;margin-top:0;margin-left:auto;
