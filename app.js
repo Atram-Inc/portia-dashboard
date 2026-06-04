@@ -108,7 +108,9 @@
       tier_High: "High",
       tier_Medium: "Medium",
       tier_Low: "Low",
+      "tier_Very Low": "Very Low",
       tier_Unmatched: "Unmatched",
+      kpi_very_low: "Very low risk",
 
       // Levels (0..4)
       level_0: "No Data",
@@ -138,13 +140,15 @@
       portfolio_section_title: "Loan-weighted exposure",
       portfolio_section_sub: "Branch risk weighted by the loan book booked in each municipality",
       table_col_portfolio: "Portfolio (COP)",
-      portfolio_note: "Loan-weighted figures use the institution's public SFC loan book by municipality (cut 2025-09-30).",
+      portfolio_note: "Loan-weighted figures use the institution's public SFC loan book by municipality (cut 2026-03-31).",
       coverage_tooltip: (matched, total) => `${matched} of ${total} branches assessed`,
       coverage_banner_lead: (unmatched, total) =>
         `${unmatched} of ${total} branches could not be assessed.`,
       coverage_banner_hint:
         'Filter the Branch Risk Table by Match → "not found" to see them.',
-      hazard_profile_title: "Hazard exposure profile (portfolio mean, 0-4 scale)",
+      hazard_profile_title: "Hazard exposure profile (share of branches by risk level)",
+      hz_branches: (n) => `${n} branches`,
+      hz_avg: (v) => `avg ${v}/10`,
       worst_branch_title: "Worst-exposed branch",
       best_branch_title: "Best-positioned branch",
       score_word: "score",
@@ -258,7 +262,7 @@
         {source: "ND-GAIN Country Index", purpose: "Country vulnerability + adaptation readiness (available to the analyst on request)", resolution: "Country", vintage: "Annual", license: "CC BY-SA 4.0"},
       ],
       methodology_score_title: "Composite risk score",
-      methodology_score_body: "Per-branch score is normalised to 0-10: Score = (WeightedAverage − 1) / 3 × 10, where WeightedAverage is the mean of the reported hazard levels (1-4) multiplied by a settlement factor (Rural ×1.25, Peri-urban ×1.10, Urban ×1.00 - smaller settlements carry higher climate risk: lower adaptive capacity and fewer financial buffers). Settlement type is inferred from city population (GeoNames); unknown defaults to Peri-urban. Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds: High ≥ 6.7, Medium 3.4-6.7, Low < 3.4.",
+      methodology_score_body: "Per-branch score is normalised to 0-10: Score = (WeightedAverage − 1) / 3 × 10, where WeightedAverage is the mean of the reported hazard levels (1-4) multiplied by a settlement factor (Rural ×1.25, Peri-urban ×1.10, Urban ×1.00 - smaller settlements carry higher climate risk: lower adaptive capacity and fewer financial buffers). Settlement type is inferred from city population (GeoNames); unknown defaults to Peri-urban. Branches with no ThinkHazard match are tagged Unmatched and excluded from KPI aggregates. Tier thresholds (aligned to ThinkHazard): Very Low < 2.5, Low 2.5-4.5, Medium 4.5-7.5, High > 7.5.",
       methodology_limitations_title: "Limitations",
       methodology_limitations_body: "ThinkHazard methodology v2 dates from 2017; ADM2 granularity may be coarser than a branch's actual exposure. Water risk, climate trajectory, and country context are country-level; branch-level conditions can differ substantially. Sub-national alternatives are on the roadmap.",
 
@@ -317,7 +321,9 @@
       tier_High: "Alto",
       tier_Medium: "Medio",
       tier_Low: "Bajo",
+      "tier_Very Low": "Muy bajo",
       tier_Unmatched: "Sin coincidencia",
+      kpi_very_low: "Riesgo muy bajo",
 
       // Levels
       level_0: "Sin datos",
@@ -347,13 +353,15 @@
       portfolio_section_title: "Exposición ponderada por cartera",
       portfolio_section_sub: "Riesgo de cada sucursal ponderado por el saldo de crédito en su municipio",
       table_col_portfolio: "Cartera (COP)",
-      portfolio_note: "Las cifras ponderadas usan el saldo de crédito público de la entidad ante la SFC por municipio (corte 2025-09-30).",
+      portfolio_note: "Las cifras ponderadas usan el saldo de crédito público de la entidad ante la SFC por municipio (corte 2026-03-31).",
       coverage_tooltip: (matched, total) => `${matched} de ${total} sucursales evaluadas`,
       coverage_banner_lead: (unmatched, total) =>
         `${unmatched} de ${total} sucursales no pudieron ser evaluadas.`,
       coverage_banner_hint:
         'Filtra la Tabla de riesgo por sucursal en Coincidencia → "sin coincidencia" para verlas.',
-      hazard_profile_title: "Perfil de exposición a amenazas (promedio del portafolio, escala 0-4)",
+      hazard_profile_title: "Perfil de exposición a amenazas (distribución de sucursales por nivel)",
+      hz_branches: (n) => `${n} sucursales`,
+      hz_avg: (v) => `prom. ${v}/10`,
       worst_branch_title: "Sucursal más expuesta",
       best_branch_title: "Sucursal mejor posicionada",
       score_word: "puntaje",
@@ -463,7 +471,7 @@
         {source: "Índice de País ND-GAIN", purpose: "Vulnerabilidad + preparación de adaptación nacional (disponible para el analista a solicitud)", resolution: "Nacional", vintage: "Anual", license: "CC BY-SA 4.0"},
       ],
       methodology_score_title: "Puntaje compuesto de riesgo",
-      methodology_score_body: "El puntaje por sucursal se normaliza a 0-10: Puntaje = (PromedioPonderado − 1) / 3 × 10, donde PromedioPonderado es la media de los niveles de amenaza reportados (1-4) multiplicada por un factor de asentamiento (Rural ×1.25, Periurbano ×1.10, Urbano ×1.00 - los asentamientos más pequeños tienen mayor riesgo climático: menor capacidad de adaptación y menos colchones financieros). El tipo de asentamiento se infiere de la población de la ciudad (GeoNames); si se desconoce, se asume Periurbano. Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs. Umbrales: Alto ≥ 6.7, Medio 3.4-6.7, Bajo < 3.4.",
+      methodology_score_body: "El puntaje por sucursal se normaliza a 0-10: Puntaje = (PromedioPonderado − 1) / 3 × 10, donde PromedioPonderado es la media de los niveles de amenaza reportados (1-4) multiplicada por un factor de asentamiento (Rural ×1.25, Periurbano ×1.10, Urbano ×1.00 - los asentamientos más pequeños tienen mayor riesgo climático: menor capacidad de adaptación y menos colchones financieros). El tipo de asentamiento se infiere de la población de la ciudad (GeoNames); si se desconoce, se asume Periurbano. Las sucursales sin coincidencia ThinkHazard se etiquetan como Sin coincidencia y se excluyen de los KPIs. Umbrales (alineados con ThinkHazard): Muy bajo < 2.5, Bajo 2.5-4.5, Medio 4.5-7.5, Alto > 7.5.",
       methodology_limitations_title: "Limitaciones",
       methodology_limitations_body: "La metodología ThinkHazard v2 es de 2017; la granularidad ADM2 puede ser más gruesa que la exposición real de una sucursal. Riesgo hídrico, trayectoria climática y contexto nacional son a nivel país; las condiciones a nivel de sucursal pueden diferir sustancialmente. Hay alternativas sub-nacionales en la hoja de ruta.",
 
@@ -640,7 +648,7 @@
   }
 
   function tierClass(t) {
-    return {High:"t-h", Medium:"t-m", Low:"t-l"}[t] || "t-u";
+    return {High:"t-h", Medium:"t-m", Low:"t-l", "Very Low":"t-vl"}[t] || "t-u";
   }
   function matchClass(mt) {
     if (mt === "exact") return "m-x";
@@ -894,8 +902,9 @@
       {label: t("kpi_coverage"),    value: pct + "%",            color: covColor, title: covTitle},
       {label: t("kpi_high"),        value: String(payload.kpi.high),   color: "#d8607a"},
       {label: t("kpi_medium"),      value: String(payload.kpi.medium), color: "var(--amber)"},
-      {label: t("kpi_low"),         value: String(payload.kpi.low),    color: "#8bbc3a"},
-      {label: t("kpi_avg"),         value: scoreWithMax(payload.kpi.avg, payload), color: "var(--yellow)"},
+      {label: t("kpi_low"),         value: String(payload.kpi.low),    color: "#f7d562"},
+      {label: t("kpi_very_low"),    value: String(payload.kpi.very_low != null ? payload.kpi.very_low : 0), color: "#8bbc3a"},
+      {label: t("kpi_avg"),         value: scoreWithMax(payload.kpi.avg, payload), color: "var(--cream)"},
       {label: t("kpi_top_hazard"),  value: topHazardDisplay,           color: "var(--cream)", text:true},
     ];
 
@@ -939,18 +948,48 @@
 
     const bars = document.getElementById("hazard-bars");
     bars.innerHTML = "";
-    // Sort highest exposure first (highest bar at the top).
+    // Stacked distribution by risk level. Each bar = % of branches at each
+    // level (High→Very Low→No data), with the branch count + 0-10 average on
+    // the left. A hazard in few branches reads as mostly "No data", so rare
+    // hazards (Tsunami/Coastal) no longer dominate. (Ticket 1.)
+    const SEGS = [
+      {k:"h",      cls:"seg-h",  label:t("tier_High")},
+      {k:"m",      cls:"seg-m",  label:t("tier_Medium")},
+      {k:"l",      cls:"seg-l",  label:t("tier_Low")},
+      {k:"vl",     cls:"seg-vl", label:t("tier_Very Low")},
+      {k:"nodata", cls:"seg-nd", label:t("level_0")},
+    ];
+    // Legend
+    const legend = el("div", {class:"hz-legend"});
+    SEGS.forEach(s => {
+      const item = el("span", {class:"hz-leg-item"});
+      item.appendChild(el("span", {class:"hz-leg-sw " + s.cls}));
+      item.appendChild(document.createTextNode(s.label));
+      legend.appendChild(item);
+    });
+    bars.appendChild(legend);
     const hazardsSorted = payload.hazards.slice().sort((a, b) => (b.value || 0) - (a.value || 0));
     hazardsSorted.forEach(h => {
-      const row = el("div", {class:"hbar-row"});
-      row.appendChild(el("div", {class:"hbar-l"}, hazardName(h)));
-      const track = el("div", {class:"hbar-track"});
-      track.appendChild(el("div", {
-        class:"hbar-fill",
-        style:`width:${(h.value/4*100).toFixed(1)}%;background:${barColor(h.value)};`,
-      }));
+      const d = h.dist || {};
+      const tot = SEGS.reduce((a, s) => a + (d[s.k] || 0), 0) || 1;
+      const row = el("div", {class:"hzrow"});
+      const lab = el("div", {class:"hz-lab"});
+      lab.appendChild(el("div", {class:"hz-name"}, hazardName(h)));
+      const avg = (h.value != null) ? h.value.toFixed(1) : "-";
+      lab.appendChild(el("div", {class:"hz-meta"},
+        t("hz_branches", h.count || 0) + " · " + t("hz_avg", avg)));
+      row.appendChild(lab);
+      const track = el("div", {class:"hz-track"});
+      SEGS.forEach(s => {
+        const c = d[s.k] || 0;
+        if (c <= 0) return;
+        track.appendChild(el("div", {
+          class:"hz-seg " + s.cls,
+          style:`width:${(c / tot * 100).toFixed(2)}%`,
+          title:`${s.label}: ${c}`,
+        }));
+      });
       row.appendChild(track);
-      row.appendChild(el("div", {class:"hbar-v"}, h.value.toFixed(1)));
       bars.appendChild(row);
     });
 
@@ -986,7 +1025,7 @@
   // Branch table - interactive: text-filter, region/tier/match dropdowns,
   // and column sort via clickable headers. State (filters + sort) is held
   // in `branchState` and a single applyFilters() call re-renders the tbody.
-  const TIER_ORDER = {High:3, Medium:2, Low:1, Unmatched:0};
+  const TIER_ORDER = {High:4, Medium:3, Low:2, "Very Low":1, Unmatched:0};
   const branchState = {
     rows: [],
     colDefs: [],
@@ -1252,7 +1291,7 @@
   // ── Region score table ──────────────────────────────────────────────
   // Aggregated per-state rows from payload.regions (count / avg 0-10 / tier /
   // High-Medium-Low counts). Sortable like the branch table; exports to Excel.
-  const REGION_TIER_ORDER = {High:3, Medium:2, Low:1, Unmatched:0};
+  const REGION_TIER_ORDER = {High:4, Medium:3, Low:2, "Very Low":1, Unmatched:0};
   const regionState = {rows: [], colDefs: [], sortKey: null, sortDir: 1};
 
   function renderRegions(payload) {
@@ -1275,6 +1314,7 @@
       {label:t("tier_High"),          align:"center", value:(r)=>r.high||0},
       {label:t("tier_Medium"),        align:"center", value:(r)=>r.medium||0},
       {label:t("tier_Low"),           align:"center", value:(r)=>r.low||0},
+      {label:t("tier_Very Low"),      align:"center", value:(r)=>r.very_low||0},
     ];
     regionState.rows = regions.slice();
     regionState.colDefs = colDefs;
@@ -1335,6 +1375,7 @@
       tr.appendChild(el("td", {class:"ccenter"}, String(r.high)));
       tr.appendChild(el("td", {class:"ccenter"}, String(r.medium)));
       tr.appendChild(el("td", {class:"ccenter"}, String(r.low)));
+      tr.appendChild(el("td", {class:"ccenter"}, String(r.very_low != null ? r.very_low : 0)));
       tbody.appendChild(tr);
     });
   }
@@ -1346,7 +1387,8 @@
   // external dependency, approved for the map). If it's unavailable we fall
   // back to a dependency-free SVG scatter so the tab is never empty.
   const MAP_TIER_COLOR = {
-    High: "#d8607a", Medium: "#f1974c", Low: "#8bbc3a", Unmatched: "#a8a399",
+    High: "#d8607a", Medium: "#f1974c", Low: "#f7d562",
+    "Very Low": "#8bbc3a", Unmatched: "#a8a399",
   };
   let _map = null;          // Leaflet map instance
   let _mapTiles = null;     // current tile layer
@@ -1386,7 +1428,7 @@
     card.appendChild(el("div", {id:"risk-map-canvas"}));
     // Legend doubles as a per-tier toggle: click to show/hide that tier.
     const legend = el("div", {class:"map-legend"});
-    [["High", t("tier_High")], ["Medium", t("tier_Medium")], ["Low", t("tier_Low")]]
+    [["High", t("tier_High")], ["Medium", t("tier_Medium")], ["Low", t("tier_Low")], ["Very Low", t("tier_Very Low")]]
       .forEach(([canon, label]) => {
         const item = el("button", {
           type:"button", class:"map-legend-item", "data-tier":canon,
@@ -1426,8 +1468,8 @@
     addMapTiles();
     // One layer group per tier so the legend can toggle them on/off.
     _mapLayers = {
-      High: L.layerGroup(), Medium: L.layerGroup(),
-      Low: L.layerGroup(), Unmatched: L.layerGroup(),
+      High: L.layerGroup(), Medium: L.layerGroup(), Low: L.layerGroup(),
+      "Very Low": L.layerGroup(), Unmatched: L.layerGroup(),
     };
     const latlngs = [];
     // Circle size encodes PORTFOLIO (loan COP) when available - a bigger book
@@ -1708,11 +1750,11 @@
     });
     const regionHeader = [
       t("regions_col_region"), t("regions_col_branches"), scoreHdr, t("table_col_tier"),
-      t("tier_High"), t("tier_Medium"), t("tier_Low"),
+      t("tier_High"), t("tier_Medium"), t("tier_Low"), t("tier_Very Low"),
     ];
     const regionRows = (payload.regions || []).map(r => [
       r.name, r.count, (r.avg_score == null ? "" : Number(r.avg_score)),
-      tierLabel(r.tier), r.high, r.medium, r.low,
+      tierLabel(r.tier), r.high, r.medium, r.low, (r.very_low != null ? r.very_low : 0),
     ]);
     const sheets = [{name: t("nav_branches"), rows: [branchHeader].concat(branchRows)}];
     if (regionRows.length) sheets.push({name: t("nav_regions"), rows: [regionHeader].concat(regionRows)});
