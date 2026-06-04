@@ -43,7 +43,9 @@
  *     // loan data; null otherwise. Dashboard renders its KPIs only when set.
  *     portfolio: {
  *       currency:"COP", as_of:"2025-09-30", weighted_score:5.1, weighted_tier:"Medium",
- *       total_cop, cop_high, pct_high, pct_medium, pct_low,
+ *       total_cop,
+ *       pct_any_high, cop_any_high,   // book in municipalities HIGH for ANY hazard (headline)
+ *       cop_high, pct_high, pct_medium, pct_low,  // composite-tier breakdown
  *       hazards_high:[{code,name,pct}], branches_weighted:685
  *     } | null,
  *     coverage: {                    // optional; absent on older payloads
@@ -130,8 +132,8 @@
       kpi_avg: "Avg. score",
       kpi_top_hazard: "Top hazard",
       kpi_avg_weighted: "Weighted score",
-      kpi_pct_high: "% portfolio in HIGH",
-      kpi_cop_high: "COP in HIGH",
+      kpi_pct_high: "% book in HIGH-hazard area",
+      kpi_cop_high: "COP in HIGH-hazard area",
       kpi_portfolio: "Total portfolio",
       portfolio_section_title: "Loan-weighted exposure",
       portfolio_section_sub: "Branch risk weighted by the loan book booked in each municipality",
@@ -339,8 +341,8 @@
       kpi_avg: "Puntaje promedio",
       kpi_top_hazard: "Amenaza principal",
       kpi_avg_weighted: "Puntaje ponderado",
-      kpi_pct_high: "% cartera en ALTA",
-      kpi_cop_high: "COP en ALTA",
+      kpi_pct_high: "% cartera en zona ALTA",
+      kpi_cop_high: "COP en zona ALTA",
       kpi_portfolio: "Cartera total",
       portfolio_section_title: "Exposición ponderada por cartera",
       portfolio_section_sub: "Riesgo de cada sucursal ponderado por el saldo de crédito en su municipio",
@@ -901,11 +903,15 @@
     const pf = payload.portfolio;
     if (pf) {
       const pfTierColor = {High:"#d8607a", Medium:"var(--amber)", Low:"#8bbc3a"}[pf.weighted_tier] || "var(--cream)";
+      // HIGH exposure = share of book in municipalities HIGH for ANY hazard
+      // (the SFC headline). Fall back to composite-tier for pre-5.4.1 payloads.
+      const pctHigh = (pf.pct_any_high != null ? pf.pct_any_high : pf.pct_high);
+      const copHigh = (pf.cop_any_high != null ? pf.cop_any_high : pf.cop_high);
       const pfCards = [
         {label: t("kpi_avg_weighted"), value: scoreWithMax(pf.weighted_score, payload), color: pfTierColor},
-        {label: t("kpi_pct_high"),     value: (pf.pct_high * 100).toFixed(1) + "%",     color: "#d8607a"},
-        {label: t("kpi_cop_high"),     value: fmtCop(pf.cop_high),                      color: "var(--amber)"},
-        {label: t("kpi_portfolio"),    value: fmtCop(pf.total_cop),                     color: "var(--cream)"},
+        {label: t("kpi_pct_high"),     value: (pctHigh * 100).toFixed(1) + "%", color: "#d8607a"},
+        {label: t("kpi_cop_high"),     value: fmtCop(copHigh),                  color: "var(--amber)"},
+        {label: t("kpi_portfolio"),    value: fmtCop(pf.total_cop),             color: "var(--cream)"},
       ];
       const section = el("section", {id:"portfolio-section", class:"pf-section"});
       const head = el("div", {class:"pf-section-head"});
