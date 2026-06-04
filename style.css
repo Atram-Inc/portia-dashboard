@@ -303,8 +303,25 @@ select.branch-filter-input{cursor:pointer;}
 .tp{display:inline-block;color:white;padding:3px 12px;border-radius:999px;font-size:0.74rem;font-weight:600;letter-spacing:0.01em;}
 .t-h{background:var(--rust);}
 .t-m{background:var(--amber);color:#25231f;}
-.t-l{background:var(--moss);}
+.t-l{background:var(--yellow);color:#25231f;}
+.t-vl{background:var(--moss);}
 .t-u{background:var(--stone);color:#25231f;}
+
+/* Hazard exposure profile - stacked distribution by risk level (Ticket 1) */
+.hz-legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;}
+.hz-leg-item{display:inline-flex;align-items:center;gap:6px;font-size:0.74rem;color:var(--text-dim);}
+.hz-leg-sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+.hzrow{display:flex;align-items:center;gap:14px;margin-bottom:9px;}
+.hz-lab{width:168px;flex-shrink:0;}
+.hz-name{font-size:0.86rem;color:var(--cream);font-weight:500;}
+.hz-meta{font-size:0.7rem;color:var(--text-dim);font-family:'JetBrains Mono',ui-monospace,monospace;margin-top:1px;}
+.hz-track{flex:1;display:flex;height:16px;border-radius:5px;overflow:hidden;background:var(--surface-3);}
+.hz-seg{height:100%;}
+.seg-h,.hz-leg-sw.seg-h{background:#d8607a;}
+.seg-m,.hz-leg-sw.seg-m{background:var(--amber);}
+.seg-l,.hz-leg-sw.seg-l{background:var(--yellow);}
+.seg-vl,.hz-leg-sw.seg-vl{background:#8bbc3a;}
+.seg-nd,.hz-leg-sw.seg-nd{background:var(--surface-3);}
 
 /* Settlement pills (Rural / Peri-urban / Urban). Rural carries the score
    penalty so it reads warmest; urban is the cool baseline. */
