@@ -601,6 +601,13 @@
   }
 
   // ── Rendering helpers ───────────────────────────────────────────────
+  // Em/en-dashes must never appear in the rendered dashboard (house style),
+  // including ones that arrive via the payload (e.g. branch names). Replace
+  // them with a plain hyphen at every text sink.
+  function dash(s) {
+    return typeof s === "string" ? s.replace(/[—–]/g, "-") : s;
+  }
+
   function el(tag, attrs = {}, children = []) {
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -608,10 +615,10 @@
       else if (k === "html") n.innerHTML = v;
       else n.setAttribute(k, v);
     }
-    if (typeof children === "string") n.textContent = children;
+    if (typeof children === "string") n.textContent = dash(children);
     else for (const c of children) {
       if (c == null) continue;
-      n.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+      n.appendChild(typeof c === "string" ? document.createTextNode(dash(c)) : c);
     }
     return n;
   }
@@ -677,7 +684,7 @@
   // nodes. Avoids innerHTML so we don't have to think about XSS even though
   // the source is our own LOCALES.
   function renderBoldMarkdown(text, target) {
-    const parts = String(text).split(/\*\*(.+?)\*\*/g);
+    const parts = dash(String(text)).split(/\*\*(.+?)\*\*/g);
     parts.forEach((p, i) => {
       if (!p) return;
       if (i % 2 === 1) target.appendChild(el("strong", {}, p));
@@ -801,7 +808,7 @@
     const title = document.getElementById("title");
     const country = payload.country_display || "";
     title.innerHTML = "";
-    title.appendChild(document.createTextNode(payload.fsp_name));
+    title.appendChild(document.createTextNode(dash(payload.fsp_name)));
     if (country) {
       title.appendChild(document.createTextNode(", "));
       title.appendChild(el("span", {class:"topbar-country"}, country));
@@ -1008,7 +1015,7 @@
 
   function renderBranches(payload) {
     const noteEl = document.getElementById("branches-note");
-    noteEl.textContent = payload.branches_note || "";
+    noteEl.textContent = dash(payload.branches_note || "");
 
     const hazardCols = payload.hazards.map((h, i) => ({
       label: hazardName(h), align: "center",
@@ -1423,11 +1430,23 @@
       Low: L.layerGroup(), Unmatched: L.layerGroup(),
     };
     const latlngs = [];
+    // Circle size encodes PORTFOLIO (loan COP) when available - a bigger book
+    // gets a bigger circle - using a sqrt scale so AREA is ~proportional to the
+    // portfolio (avoids a few mega-branches dwarfing everything). Colour still
+    // encodes the risk tier. Falls back to score-based sizing when no cop data.
+    const maxCop = Math.max(0, ...pts.map(p => (typeof p.cop === "number" ? p.cop : 0)));
+    const radiusFor = (p) => {
+      if (maxCop > 0 && typeof p.cop === "number" && p.cop > 0) {
+        const RMIN = 4, RMAX = 22;
+        return RMIN + (RMAX - RMIN) * Math.sqrt(p.cop / maxCop);
+      }
+      const sc = p.score == null ? 0 : p.score;
+      return 5 + sc / 10 * 7;
+    };
     // Draw worst last so High markers sit on top.
     pts.slice().sort((a, b) => (a.score || 0) - (b.score || 0)).forEach(p => {
-      const sc = p.score == null ? 0 : p.score;
       const m = L.circleMarker([p.lat, p.lon], {
-        radius: 5 + sc / 10 * 7,
+        radius: radiusFor(p),
         color: "#ffffff", weight: 1, opacity: 0.9,
         fillColor: MAP_TIER_COLOR[p.tier] || MAP_TIER_COLOR.Unmatched,
         fillOpacity: 0.85,
@@ -1455,12 +1474,13 @@
     const score = p.score == null ? "-" : p.score + " / " + max;
     const row = (label, value) =>
       `<div class="ptip-row"><span>${xmlEscape(label)}</span><b>${xmlEscape(value)}</b></div>`;
-    return `<div class="ptip-title">${xmlEscape(p.name || "")}</div>` +
-      row(t("table_col_city"), p.city || "-") +
-      row(t("table_col_region"), p.state || "-") +
+    return `<div class="ptip-title">${xmlEscape(dash(p.name || ""))}</div>` +
+      row(t("table_col_city"), dash(p.city || "-")) +
+      row(t("table_col_region"), dash(p.state || "-")) +
       row(t("table_col_settlement"), settlementLabel(p.settlement)) +
       row(t("table_col_score"), score) +
-      row(t("table_col_tier"), tierLabel(p.tier));
+      row(t("table_col_tier"), tierLabel(p.tier)) +
+      (typeof p.cop === "number" ? row(t("table_col_portfolio"), fmtCop(p.cop)) : "");
   }
 
   // Fallback when Leaflet can't load: a simple SVG scatter (no basemap).
@@ -1494,7 +1514,7 @@
       c.setAttribute("fill", MAP_TIER_COLOR[p.tier] || MAP_TIER_COLOR.Unmatched);
       c.setAttribute("class", "risk-map-pt");
       const title = document.createElementNS(ns, "title");
-      title.textContent = `${p.name}${p.city ? " · " + p.city : ""} · ${t("score_word")} ${sc} · ${tierLabel(p.tier)}`;
+      title.textContent = dash(`${p.name}${p.city ? " · " + p.city : ""} · ${t("score_word")} ${sc} · ${tierLabel(p.tier)}`);
       c.appendChild(title);
       svg.appendChild(c);
     });
@@ -1600,7 +1620,7 @@
         if (typeof val === "number" && isFinite(val)) {
           cells += `<c r="${ref}"><v>${val}</v></c>`;
         } else {
-          cells += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(val == null ? "" : val)}</t></is></c>`;
+          cells += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(dash(val == null ? "" : val))}</t></is></c>`;
         }
       });
       body += `<row r="${r + 1}">${cells}</row>`;
