@@ -14,7 +14,8 @@
  *     score_max: 10,                 // all scores are on a 0-score_max scale
  *     kpi: {
  *       total: 190, high: 96, medium: 94, low: 0,
- *       avg: 5.8,                      // 0-10
+ *       avg: 5.8,                      // 0-10 equal-weighted (always present)
+ *       avg_weighted: 5.1 | null,      // 0-10 portfolio-weighted; null if no SFC data
  *       top_hazard_code: "LS",         // hazard code, stable across langs
  *       top_hazard_label: "Landslide"  // English fallback if no code
  *     },
@@ -28,14 +29,23 @@
  *     branches: [
  *       // score 0-10; settlement "U"|"P"|"R" (urban/peri-urban/rural);
  *       // lat/lon present only when the branch was geocoded.
- *       { name, city, state, match_type, score, tier, settlement, h:[0-4]*8, lat?, lon? },
+ *       // cop = loan COP booked in the branch's municipality (SFC layer only)
+ *       { name, city, state, match_type, score, tier, settlement, h:[0-4]*8, lat?, lon?, cop? },
  *       ...
  *     ],
  *     branches_note: "Showing 75 of 190..." | null,
  *     regions: [                     // per-state aggregation, worst-first
- *       { name, count, avg_score, tier, high, medium, low },
+ *       // cop / avg_weighted present only with the SFC portfolio layer
+ *       { name, count, avg_score, tier, high, medium, low, cop?, avg_weighted? },
  *       ...
  *     ],
+ *     // Portfolio-weighted exposure layer — present ONLY for FSPs mapped to SFC
+ *     // loan data; null otherwise. Dashboard renders its KPIs only when set.
+ *     portfolio: {
+ *       currency:"COP", as_of:"2025-09-30", weighted_score:5.1, weighted_tier:"Medium",
+ *       total_cop, cop_high, pct_high, pct_medium, pct_low,
+ *       hazards_high:[{code,name,pct}], branches_weighted:685
+ *     } | null,
  *     coverage: {                    // optional; absent on older payloads
  *       uploaded: 190, matched: 165, unmatched: 25
  *     } | null,
@@ -119,6 +129,14 @@
       kpi_low: "Low risk",
       kpi_avg: "Avg. score",
       kpi_top_hazard: "Top hazard",
+      kpi_avg_weighted: "Weighted score",
+      kpi_pct_high: "% portfolio in HIGH",
+      kpi_cop_high: "COP in HIGH",
+      kpi_portfolio: "Total portfolio",
+      portfolio_section_title: "Loan-weighted exposure",
+      portfolio_section_sub: "Branch risk weighted by the loan book booked in each municipality",
+      table_col_portfolio: "Portfolio (COP)",
+      portfolio_note: "Loan-weighted figures use the institution's public SFC loan book by municipality (cut 2025-09-30).",
       coverage_tooltip: (matched, total) => `${matched} of ${total} branches assessed`,
       coverage_banner_lead: (unmatched, total) =>
         `${unmatched} of ${total} branches could not be assessed.`,
@@ -320,6 +338,14 @@
       kpi_low: "Riesgo bajo",
       kpi_avg: "Puntaje promedio",
       kpi_top_hazard: "Amenaza principal",
+      kpi_avg_weighted: "Puntaje ponderado",
+      kpi_pct_high: "% cartera en ALTA",
+      kpi_cop_high: "COP en ALTA",
+      kpi_portfolio: "Cartera total",
+      portfolio_section_title: "Exposición ponderada por cartera",
+      portfolio_section_sub: "Riesgo de cada sucursal ponderado por el saldo de crédito en su municipio",
+      table_col_portfolio: "Cartera (COP)",
+      portfolio_note: "Las cifras ponderadas usan el saldo de crédito público de la entidad ante la SFC por municipio (corte 2025-09-30).",
       coverage_tooltip: (matched, total) => `${matched} de ${total} sucursales evaluadas`,
       coverage_banner_lead: (unmatched, total) =>
         `${unmatched} de ${total} sucursales no pudieron ser evaluadas.`,
@@ -593,6 +619,17 @@
     return Number(v).toFixed(digits) + unit;
   }
 
+  // Compact COP money formatter. Uses the Colombian convention B = billón = 1e12
+  // (matching the SFC "$714.3 B" system figure); MM = mil millones = 1e9.
+  function fmtCop(v) {
+    if (v == null || isNaN(v)) return "-";
+    const n = Number(v);
+    if (Math.abs(n) >= 1e12) return "$" + (n / 1e12).toFixed(1) + " B";
+    if (Math.abs(n) >= 1e9)  return "$" + (n / 1e9).toFixed(1) + " MM";
+    if (Math.abs(n) >= 1e6)  return "$" + Math.round(n / 1e6) + " M";
+    return "$" + Math.round(n).toLocaleString();
+  }
+
   function tierClass(t) {
     return {High:"t-h", Medium:"t-m", Low:"t-l"}[t] || "t-u";
   }
@@ -713,7 +750,7 @@
   function scoreWithMax(score, payload) {
     const max = (payload && payload.score_max) || 10;
     if (score == null || isNaN(score)) return "-";
-    return score + " / " + max;
+    return score + " / " + max;   // nbsp keeps "5.6 / 10" unbroken
   }
 
   // ── Tab navigation ──────────────────────────────────────────────────
@@ -850,16 +887,36 @@
       {label: t("kpi_medium"),      value: String(payload.kpi.medium), color: "var(--amber)"},
       {label: t("kpi_low"),         value: String(payload.kpi.low),    color: "#8bbc3a"},
       {label: t("kpi_avg"),         value: scoreWithMax(payload.kpi.avg, payload), color: "var(--yellow)"},
-      {label: t("kpi_top_hazard"),  value: topHazardDisplay,           color: "var(--cream)"},
+      {label: t("kpi_top_hazard"),  value: topHazardDisplay,           color: "var(--cream)", text:true},
     ];
-    cards.forEach(card => {
-      const attrs = {class:"kpi"};
-      if (card.title) attrs.title = card.title;
-      const c = el("div", attrs);
-      c.appendChild(el("div", {class:"kpi-v", style:`color:${card.color}`}, card.value));
-      c.appendChild(el("div", {class:"kpi-l"}, card.label));
-      kpis.appendChild(c);
-    });
+
+    cards.forEach(card => kpis.appendChild(makeKpiCard(card)));
+
+    // Loan-weighted exposure — a SEPARATE labelled block, rendered only when the
+    // payload carries an SFC portfolio layer. Kept distinct from the hazard KPIs
+    // above so (a) the two stories don't blur together and (b) the grid never
+    // ends up unbalanced (e.g. 10 cards + 1 orphan). Absent for every other FSP.
+    const oldPf = document.getElementById("portfolio-section");
+    if (oldPf) oldPf.remove();
+    const pf = payload.portfolio;
+    if (pf) {
+      const pfTierColor = {High:"#d8607a", Medium:"var(--amber)", Low:"#8bbc3a"}[pf.weighted_tier] || "var(--cream)";
+      const pfCards = [
+        {label: t("kpi_avg_weighted"), value: scoreWithMax(pf.weighted_score, payload), color: pfTierColor},
+        {label: t("kpi_pct_high"),     value: (pf.pct_high * 100).toFixed(1) + "%",     color: "#d8607a"},
+        {label: t("kpi_cop_high"),     value: fmtCop(pf.cop_high),                      color: "var(--amber)"},
+        {label: t("kpi_portfolio"),    value: fmtCop(pf.total_cop),                     color: "var(--cream)"},
+      ];
+      const section = el("section", {id:"portfolio-section", class:"pf-section"});
+      const head = el("div", {class:"pf-section-head"});
+      head.appendChild(el("div", {class:"pf-section-title"}, t("portfolio_section_title")));
+      head.appendChild(el("div", {class:"pf-section-sub"}, t("portfolio_section_sub")));
+      section.appendChild(head);
+      const grid = el("div", {class:"kpi-row pf-grid"});
+      pfCards.forEach(card => grid.appendChild(makeKpiCard({...card, pf:true})));
+      section.appendChild(grid);
+      kpis.insertAdjacentElement("afterend", section);
+    }
 
     // Update the static "Hazard exposure profile" section title.
     const summaryPanel = document.getElementById("tab-summary");
@@ -893,6 +950,14 @@
       wb.appendChild(grid);
     }
   }
+  function makeKpiCard(card) {
+    const attrs = {class: "kpi" + (card.pf ? " kpi-pf" : "")};
+    if (card.title) attrs.title = card.title;
+    const c = el("div", attrs);
+    c.appendChild(el("div", {class:"kpi-v" + (card.text ? " kpi-v-text" : ""), style:`color:${card.color}`}, card.value));
+    c.appendChild(el("div", {class:"kpi-l"}, card.label));
+    return c;
+  }
   function makeWB(b, kind, title) {
     const c = el("div", {class:"wb-card " + kind});
     c.appendChild(el("div", {class:"card-title"}, title));
@@ -912,6 +977,7 @@
   const branchState = {
     rows: [],
     colDefs: [],
+    hasCop: false,
     text: "",
     region: "",
     tier: "",
@@ -942,6 +1008,10 @@
       label: hazardName(h), align: "center",
       value: (b) => (b.h && typeof b.h[i] === "number") ? b.h[i] : -1,
     }));
+    // Portfolio column appears only when the payload carries per-branch COP
+    // (SFC loan-book layer). branchState.hasCop keeps renderBranchRow in sync.
+    const hasCop = payload.branches.some(b => typeof b.cop === "number");
+    branchState.hasCop = hasCop;
     const colDefs = [
       {label:t("table_col_branch"),     align:"left",   value:(b)=>(b.name||"").toLowerCase()},
       {label:t("table_col_city"),       align:"left",   value:(b)=>(b.city||"").toLowerCase()},
@@ -950,7 +1020,9 @@
       {label:t("table_col_match"),      align:"center", value:(b)=>matchBucket(b.match_type)},
       {label:scoreColLabel(payload),    align:"center", value:(b)=>(b.score==null ? -1 : Number(b.score))},
       {label:t("table_col_tier"),       align:"center", value:(b)=>(TIER_ORDER[b.tier] || 0)},
-    ].concat(hazardCols);
+    ].concat(hasCop ? [
+      {label:t("table_col_portfolio"),  align:"center", value:(b)=>(typeof b.cop==="number" ? b.cop : -1)},
+    ] : []).concat(hazardCols);
 
     const thead = document.getElementById("branch-thead");
     thead.innerHTML = "";
@@ -1127,6 +1199,10 @@
     const tierTd = el("td", {class:"ccenter"});
     tierTd.appendChild(el("span", {class:"tp " + tierClass(b.tier)}, tierLabel(b.tier)));
     tr.appendChild(tierTd);
+    if (branchState.hasCop) {
+      tr.appendChild(el("td", {class:"ccenter"},
+        typeof b.cop === "number" ? fmtCop(b.cop) : "-"));
+    }
     (b.h || []).forEach(v => {
       tr.appendChild(el("td", {class:"h h" + v}, levelLabel(v)));
     });
@@ -1589,16 +1665,18 @@
     const max = (payload && payload.score_max) || 10;
     const scoreHdr = t("table_col_score") + " (0-" + max + ")";
     const haz = (payload.hazards || []).map(h => hazardName(h));
+    const hasCop = (payload.branches || []).some(b => typeof b.cop === "number");
     const branchHeader = [
       t("table_col_branch"), t("table_col_city"), t("table_col_region"),
       t("table_col_settlement"), t("table_col_match"), scoreHdr, t("table_col_tier"),
-    ].concat(haz);
+    ].concat(hasCop ? [t("table_col_portfolio") + " (COP)"] : []).concat(haz);
     const branchRows = (payload.branches || []).map(b => {
       const row = [
         b.name || "", b.city || "", b.state || "",
         settlementLabel(b.settlement), matchLabel(b.match_type),
         (b.score == null ? "" : Number(b.score)), tierLabel(b.tier),
       ];
+      if (hasCop) row.push(typeof b.cop === "number" ? Math.round(b.cop) : "");
       (b.h || []).forEach(v => row.push(levelLabel(v)));
       return row;
     });

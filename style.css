@@ -214,10 +214,22 @@ a{color:inherit;text-decoration:none;}
 .coverage-banner.cb-alert{background:rgba(216,96,122,0.10);border-color:rgba(216,96,122,0.45);color:var(--text);}
 
 /* KPI cards --------------------------------------------------------- */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;}
-.kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
-.kpi-v{font-size:1.65rem;font-weight:700;font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.1;color:var(--cream);}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:24px;}
+.kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0;}
+.kpi-v{font-size:1.45rem;font-weight:700;font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.15;color:var(--cream);}
+/* Text-valued KPIs (e.g. Top hazard) use the sans font at a smaller size so
+   long names like "Coastal Flood" fit / wrap cleanly instead of clipping. */
+.kpi-v.kpi-v-text{font-size:1.05rem;font-family:'Inter',system-ui,sans-serif;font-weight:600;line-height:1.25;}
 .kpi-l{font-size:0.68rem;color:var(--text-dim);margin-top:4px;text-transform:uppercase;letter-spacing:0.08em;font-weight:500;}
+
+/* Loan-weighted exposure block (SFC portfolio layer) -----------------*/
+.pf-section{margin:0 0 24px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--surface);}
+.pf-section-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.pf-section-title{font-size:0.95rem;font-weight:600;color:var(--cream);letter-spacing:-0.01em;}
+.pf-section-title::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--amber);margin-right:9px;vertical-align:middle;}
+.pf-section-sub{font-size:0.78rem;color:var(--text-dim);}
+.pf-grid{margin-bottom:0;}
+.kpi-pf{border-color:rgba(241,151,76,0.30);}
 
 /* Section heads ------------------------------------------------------*/
 .section-title{font-size:0.95rem;font-weight:600;color:var(--cream);margin:4px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
